@@ -1,6 +1,20 @@
 // The entry file of your WebAssembly module.
-import { Address, Context, Storage, isDeployingContract, setBytecode, transferCoins } from '@massalabs/massa-as-sdk';
-import { Args, boolToByte, bytesToU256, stringToBytes, u256ToBytes, u64ToBytes } from '@massalabs/as-types';
+import {
+  Address,
+  Context,
+  Storage,
+  isDeployingContract,
+  setBytecode,
+  transferCoins,
+} from '@massalabs/massa-as-sdk';
+import {
+  Args,
+  boolToByte,
+  bytesToU256,
+  stringToBytes,
+  u256ToBytes,
+  u64ToBytes,
+} from '@massalabs/as-types';
 import {
   _approve,
   _balanceOf,
@@ -84,8 +98,8 @@ function buildTokenIdKey(domain: string): StaticArray<u8> {
   return stringToBytes(TOKEN_ID_KEY_PREFIX + domain);
 }
 
-function buildDomainKey(domain: string): string {
-  return DOMAIN_KEY_PREFIX + domain;
+function buildDomainKey(tokenId: u256): string {
+  return DOMAIN_KEY_PREFIX + tokenId.toString();
 }
 
 function buildTargetKey(domain: string): string {
@@ -95,9 +109,9 @@ function buildTargetKey(domain: string): string {
 /**
  * Register domain
  * @param binaryArgs (domain: string, target: string)
- * @returns void
+ * @returns tokenId of the dns as u256
  */
-export function dns_alloc(binaryArgs: StaticArray<u8>): void {
+export function dns_alloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   let args = new Args(binaryArgs);
   let domain = args.nextString().unwrap();
   let target = args.nextString().unwrap();
@@ -105,30 +119,36 @@ export function dns_alloc(binaryArgs: StaticArray<u8>): void {
   if (!isValidDomain(domain)) {
     throw new Error('Invalid domain');
   }
-  // Add 0.1 MAS for storage fees
-  let domainCost = calculateCreationCost(domain.length) + 100_000_000;
+  let domainCost = calculateCreationCost(domain.length);
   let transferredCoins = Context.transferredCoins();
   if (transferredCoins < domainCost) {
-    throw new Error('Insufficient funds to register domain. Provided:' + transferredCoins.toString()  + '. Needed: ' + domainCost.toString() + '.');
+    throw new Error(
+      'Insufficient funds to register domain. Provided:' +
+        transferredCoins.toString() +
+        '. Needed: ' +
+        domainCost.toString() +
+        '.',
+    );
   }
-  let domainKey = buildDomainKey(domain);
+  let domainKey = buildTargetKey(domain);
   if (Storage.has(domainKey)) {
     throw new Error('Domain already registered');
   }
   Storage.set(domainKey, target);
-  Storage.set(buildTargetKey(domain), target);
   assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
-  // @ts-ignore (fix for IDE)
-  let counter = bytesToU256(Storage.get(COUNTER_KEY)) + u256.One;
+  let counter = bytesToU256(Storage.get(COUNTER_KEY));
   _update(owner, counter, '');
+  Storage.set(buildDomainKey(counter), domain);
   Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
-  return;
+  // @ts-ignore (fix for IDE)
+  Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
+  return u256ToBytes(counter);
 }
 
 /**
  * Simulate domain registration
  * @param binaryArgs (domain: string)
- * @returns void
+ * @returns number of coins needed to register the domain (in nanoMAS)
  */
 export function dns_alloc_cost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   let args = new Args(binaryArgs);
@@ -141,29 +161,25 @@ export function dns_alloc_cost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   return u64ToBytes(domainCost);
 }
 
-
 /**
  * Free domain and refund half of the registration fee
- * @param binaryArgs (domain: string)
+ * @param binaryArgs (tokenId: u256)
  * @returns void
  */
 export function dns_free(binaryArgs: StaticArray<u8>): void {
   let args = new Args(binaryArgs);
-  let domain = args.nextString().unwrap();
-  if (!isValidDomain(domain)) {
-    throw new Error('Invalid domain');
-  }
-  let domainKey = buildDomainKey(domain);
+  let tokenId = args.nextU256().unwrap();
+  let domainKey = buildDomainKey(tokenId);
   if (!Storage.has(domainKey)) {
     throw new Error('Domain not registered');
   }
-  let tokenId = bytesToU256(Storage.get(buildTokenIdKey(domain)));
   let owner = _ownerOf(tokenId);
   if (new Address(owner) != Context.caller()) {
     throw new Error('Only owner can free domain');
   }
+  let domain = Storage.get(domainKey);
   Storage.del(domainKey);
-  _update('', tokenId, '')
+  _update('', tokenId, '');
   Storage.del(buildTargetKey(domain));
   Storage.del(buildTokenIdKey(domain));
   transferCoins(Context.caller(), calculateRefund(domain.length));
@@ -177,7 +193,9 @@ export function dns_free(binaryArgs: StaticArray<u8>): void {
  */
 export function dns_resolve(args: StaticArray<u8>): StaticArray<u8> {
   const argsObj = new Args(args);
-  const domain = argsObj.nextString().expect('domain argument is missing or invalid');
+  const domain = argsObj
+    .nextString()
+    .expect('domain argument is missing or invalid');
   const target = Storage.get(buildTargetKey(domain));
   return stringToBytes(target);
 }
@@ -188,8 +206,12 @@ export function dns_resolve(args: StaticArray<u8>): StaticArray<u8> {
  */
 export function dns_update_target(binaryArgs: StaticArray<u8>): void {
   const argsObj = new Args(binaryArgs);
-  const domain = argsObj.nextString().expect('domain argument is missing or invalid');
-  const newTarget = argsObj.nextString().expect('target argument is missing or invalid');
+  const domain = argsObj
+    .nextString()
+    .expect('domain argument is missing or invalid');
+  const newTarget = argsObj
+    .nextString()
+    .expect('target argument is missing or invalid');
   const tokenId = bytesToU256(Storage.get(buildTokenIdKey(domain)));
   const owner = _ownerOf(tokenId);
   if (new Address(owner) != Context.caller()) {
@@ -217,7 +239,7 @@ export function upgradeSC(args: StaticArray<u8>): void {
  */
 export function transferInternalCoins(binaryArgs: StaticArray<u8>): void {
   if (Context.caller() != new Address(Storage.get(ADMIN_KEY))) {
-    return;
+    throw new Error('Only admin can transfer internal coins');
   }
   const argsObj = new Args(binaryArgs);
   const to = argsObj.nextString().expect('to argument is missing or invalid');
@@ -225,6 +247,32 @@ export function transferInternalCoins(binaryArgs: StaticArray<u8>): void {
     .nextU64()
     .expect('amount argument is missing or invalid');
   transferCoins(new Address(to), amount);
+}
+
+/**
+ * Get the tokenId of the domain
+ * @param binaryArgs (domain: string)
+ * @returns tokenId of the domain as u256
+ */
+export function getTokenIdFromDomain(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  const args = new Args(binaryArgs);
+  const domain = args
+    .nextString()
+    .expect('domain argument is missing or invalid');
+  return Storage.get(buildTokenIdKey(domain));
+}
+
+/**
+ * Get the domain from the tokenId
+ * @param binaryArgs (tokenId: u256)
+ * @returns domain of the tokenId
+ */
+export function getDomainFromTokenId(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  const args = new Args(binaryArgs);
+  const tokenId = args
+    .nextU256()
+    .expect('tokenId argument is missing or invalid');
+  return stringToBytes(Storage.get(buildDomainKey(tokenId)));
 }
 
 // NFT RELATED FUNCTIONS
@@ -243,19 +291,6 @@ export function name(): StaticArray<u8> {
  */
 export function symbol(): StaticArray<u8> {
   return stringToBytes(_symbol());
-}
-
-/**
- * Get the token ID associated with a domain
- * @param binaryArgs (domain: string)
- * @returns Token ID in u256 as bytes
- */
-export function getTokenId(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  const args = new Args(binaryArgs);
-  const domain = args
-    .nextString()
-    .expect('domain argument is missing or invalid');
-  return Storage.get(buildTokenIdKey(domain));
 }
 
 /**
@@ -281,7 +316,11 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const tokenId = args
     .nextU256()
     .expect('tokenId argument is missing or invalid');
-  return stringToBytes(_ownerOf(tokenId));
+  const owner = _ownerOf(tokenId);
+  if (owner == '') {
+    throw new Error('Token id not found');
+  }
+  return stringToBytes(owner);
 }
 
 /**
