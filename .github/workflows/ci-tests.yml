@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          working-directory: ./smart-contract
+          cache-dependency-path: ./smart-contract/package-lock.json
 
       - name: Install
         run: npm ci
