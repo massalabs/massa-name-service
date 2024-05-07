@@ -150,7 +150,9 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
       domainCost.toString() +
       '.',
   );
-  transferCoins(Context.caller(), transferredCoins - domainCost);
+  if (transferredCoins > domainCost) {
+    transferCoins(Context.caller(), transferredCoins - domainCost);
+  }
   return u256ToBytes(counter);
 }
 
