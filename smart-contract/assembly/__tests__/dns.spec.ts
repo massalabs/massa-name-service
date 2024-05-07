@@ -1,12 +1,19 @@
-import { Args, bytesToU256, bytesToU64, stringToBytes, u256ToBytes } from '@massalabs/as-types';
+import {
+  Args,
+  boolToByte,
+  bytesToU256,
+  bytesToU64,
+  stringToBytes,
+  u256ToBytes,
+} from '@massalabs/as-types';
 import {
   constructor,
   name,
-  dns_alloc,
-  dns_alloc_cost,
-  dns_free,
-  dns_resolve,
-  dns_update_target,
+  dnsAlloc,
+  dnsAllocCost,
+  dnsFree,
+  dnsResolve,
+  dnsUpdateTarget,
   transferInternalCoins,
   getTokenIdFromDomain,
   getDomainFromTokenId,
@@ -14,6 +21,12 @@ import {
   balanceOf,
   ownerOf,
   transferFrom,
+  approve,
+  setOwner,
+  ownerAddress,
+  setApprovalForAll,
+  getApproved,
+  isApprovedForAll,
 } from '../contracts/main';
 import {
   balance,
@@ -49,54 +62,56 @@ describe('Test DNS allocation', () => {
     switchUser(owner);
   });
   test('Testing success alloc', () => {
-    let args_cost = new Args();
-    args_cost.add(domain);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args_cost.serialize())));
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(argsCost.serialize())));
     let args = new Args();
     args.add(domain);
     args.add(target);
-    expect(dns_alloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
   });
   test('Testing multiple alloc', () => {
-    let args_cost = new Args();
-    args_cost.add(domain);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args_cost.serialize())));
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(argsCost.serialize())));
     let args = new Args();
     args.add(domain);
     args.add(target);
-    expect(dns_alloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
     let args2 = new Args();
     args2.add('test2');
     args2.add(target);
-    expect(dns_alloc(args2.serialize())).toStrictEqual(u256ToBytes(u256.One));
-  })
+    expect(dnsAlloc(args2.serialize())).toStrictEqual(u256ToBytes(u256.One));
+  });
   throws('No funds sent', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    dns_alloc(args.serialize());
+    dnsAlloc(args.serialize());
   });
   throws('Too low funds sent', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())) - 1_100_000_000);
-    dns_alloc(args.serialize());
+    mockTransferredCoins(
+      bytesToU64(dnsAllocCost(args.serialize())) - 1_100_000_000,
+    );
+    dnsAlloc(args.serialize());
   });
   throws('Invalid domain', () => {
     let args = new Args();
     args.add('(invalid)');
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
   });
   throws('Domain already exists', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    dns_alloc(args.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    dnsAlloc(args.serialize());
   });
 });
 
@@ -115,28 +130,44 @@ describe('Test DNS free', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_free = new Args();
-    args_free.add(tokenId);
-    mockBalance(scAddress, bytesToU64(dns_alloc_cost(args.serialize())) / 2);
-    dns_free(args_free.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsFree = new Args();
+    argsFree.add(tokenId);
+    mockBalance(scAddress, bytesToU64(dnsAllocCost(args.serialize())) / 2);
+    dnsFree(argsFree.serialize());
+  });
+  test('Alloc again after free', () => {
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsFree = new Args();
+    argsFree.add(tokenId);
+    mockBalance(scAddress, bytesToU64(dnsAllocCost(args.serialize())) / 2);
+    dnsFree(argsFree.serialize());
+    let args2 = new Args();
+    args2.add(domain);
+    args2.add(target);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args2.serialize())));
+    dnsAlloc(args2.serialize());
   });
   throws('Domain not found', () => {
     let args = new Args();
     args.add(domain);
-    dns_free(args.serialize());
+    dnsFree(args.serialize());
   });
   throws('Not enough funds', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_free = new Args();
-    args_free.add(tokenId);
-    mockBalance(scAddress, bytesToU64(dns_alloc_cost(args.serialize())) / 4);
-    dns_free(args_free.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsFree = new Args();
+    argsFree.add(tokenId);
+    mockBalance(scAddress, bytesToU64(dnsAllocCost(args.serialize())) / 4);
+    dnsFree(argsFree.serialize());
   });
 });
 
@@ -155,18 +186,18 @@ describe('Test DNS resolve', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let args_resolve = new Args();
-    args_resolve.add(domain);
-    expect(dns_resolve(args_resolve.serialize())).toStrictEqual(
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let argsResolve = new Args();
+    argsResolve.add(domain);
+    expect(dnsResolve(argsResolve.serialize())).toStrictEqual(
       stringToBytes(target),
     );
   });
   throws('Domain not found', () => {
     let args = new Args();
     args.add(domain);
-    dns_resolve(args.serialize());
+    dnsResolve(args.serialize());
   });
 });
 
@@ -185,35 +216,35 @@ describe('Test DNS change target', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let new_target = 'AU12W92UyGW4Bd94BPniTq4Ra5yhiv6RvjazV2G9Q9GyekYkgqbme';
-    let args_change = new Args();
-    args_change.add(domain);
-    args_change.add(new_target);
-    dns_update_target(args_change.serialize());
-    let args_resolve = new Args();
-    args_resolve.add(domain);
-    expect(dns_resolve(args_resolve.serialize())).toStrictEqual(
-      stringToBytes(new_target),
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let newTarget = 'AU12W92UyGW4Bd94BPniTq4Ra5yhiv6RvjazV2G9Q9GyekYkgqbme';
+    let argsChange = new Args();
+    argsChange.add(domain);
+    argsChange.add(newTarget);
+    dnsUpdateTarget(argsChange.serialize());
+    let argsResolve = new Args();
+    argsResolve.add(domain);
+    expect(dnsResolve(argsResolve.serialize())).toStrictEqual(
+      stringToBytes(newTarget),
     );
   });
   throws('Domain not found', () => {
     let args = new Args();
     args.add(domain);
-    dns_update_target(args.serialize());
+    dnsUpdateTarget(args.serialize());
   });
   throws('Caller is not the owner', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let args_change = new Args();
-    args_change.add(domain);
-    args_change.add(target);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let argsChange = new Args();
+    argsChange.add(domain);
+    argsChange.add(target);
     switchUser(target);
-    dns_update_target(args_change.serialize());
+    dnsUpdateTarget(argsChange.serialize());
   });
 });
 
@@ -232,24 +263,24 @@ describe('Test transfer internal coins', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let args_transfer = new Args();
-    args_transfer.add(target);
-    args_transfer.add<u64>(1000);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let argsTransfer = new Args();
+    argsTransfer.add(target);
+    argsTransfer.add<u64>(1000);
     mockBalance(scAddress, 1000);
-    transferInternalCoins(args_transfer.serialize());
+    transferInternalCoins(argsTransfer.serialize());
     expect(balance()).toStrictEqual(0);
   });
   throws('Test transfer internal coins not allowed', () => {
     mockBalance(scAddress, 1000);
     switchUser(target);
-    let args_transfer = new Args();
-    args_transfer.add(target);
-    args_transfer.add<u64>(1000);
-    transferInternalCoins(args_transfer.serialize());
-  })
-})
+    let argsTransfer = new Args();
+    argsTransfer.add(target);
+    argsTransfer.add<u64>(1000);
+    transferInternalCoins(argsTransfer.serialize());
+  });
+});
 
 describe('Test get domain from tokenId', () => {
   beforeEach(() => {
@@ -266,11 +297,11 @@ describe('Test get domain from tokenId', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_get = new Args();
-    args_get.add(tokenId);
-    expect(getDomainFromTokenId(args_get.serialize())).toStrictEqual(
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsGet = new Args();
+    argsGet.add(tokenId);
+    expect(getDomainFromTokenId(argsGet.serialize())).toStrictEqual(
       stringToBytes(domain),
     );
   });
@@ -278,13 +309,13 @@ describe('Test get domain from tokenId', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let args_get = new Args();
-    args_get.add<u256>(u256.One);
-    getDomainFromTokenId(args_get.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let argsGet = new Args();
+    argsGet.add<u256>(u256.One);
+    getDomainFromTokenId(argsGet.serialize());
   });
-})
+});
 
 describe('Test get tokenId from domain', () => {
   beforeEach(() => {
@@ -301,11 +332,11 @@ describe('Test get tokenId from domain', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_get = new Args();
-    args_get.add(domain);
-    expect(getTokenIdFromDomain(args_get.serialize())).toStrictEqual(
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsGet = new Args();
+    argsGet.add(domain);
+    expect(getTokenIdFromDomain(argsGet.serialize())).toStrictEqual(
       u256ToBytes(tokenId),
     );
   });
@@ -313,11 +344,11 @@ describe('Test get tokenId from domain', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
-    let args_get = new Args();
-    args_get.add('(invalid)');
-    getTokenIdFromDomain(args_get.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+    let argsGet = new Args();
+    argsGet.add('(invalid)');
+    getTokenIdFromDomain(argsGet.serialize());
   });
 });
 
@@ -335,7 +366,7 @@ describe('Test NFT name', () => {
   test('Test NFT name', () => {
     expect(name()).toStrictEqual(stringToBytes('MassaNameService'));
   });
-})
+});
 
 // TESTS NFT RELATED FUNCTIONS
 
@@ -370,31 +401,37 @@ describe('Test NFT balanceOf', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_balance = new Args();
-    args_balance.add(owner);
-    expect(bytesToU256(balanceOf(args_balance.serialize()))).toStrictEqual(u256.One);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    bytesToU256(dnsAlloc(args.serialize()));
+    let argsBalance = new Args();
+    argsBalance.add(owner);
+    expect(bytesToU256(balanceOf(argsBalance.serialize()))).toStrictEqual(
+      u256.One,
+    );
   });
   test('Test NFT balanceOf multiple elems', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
     let args2 = new Args();
     args2.add('test2');
     args2.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args2.serialize())));
-    dns_alloc(args2.serialize());
-    let args_balance = new Args();
-    args_balance.add(owner);
-    expect(bytesToU256(balanceOf(args_balance.serialize()))).toStrictEqual(u256.fromU32(2));
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args2.serialize())));
+    dnsAlloc(args2.serialize());
+    let argsBalance = new Args();
+    argsBalance.add(owner);
+    expect(bytesToU256(balanceOf(argsBalance.serialize()))).toStrictEqual(
+      u256.fromU32(2),
+    );
   });
   test('No tokens owned', () => {
-    let args_balance = new Args();
-    args_balance.add(target);
-    expect(bytesToU256(balanceOf(args_balance.serialize()))).toStrictEqual(u256.Zero);
+    let argsBalance = new Args();
+    argsBalance.add(target);
+    expect(bytesToU256(balanceOf(argsBalance.serialize()))).toStrictEqual(
+      u256.Zero,
+    );
   });
 });
 
@@ -413,16 +450,16 @@ describe('Test NFT ownerOf', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    const tokenId = bytesToU256(dns_alloc(args.serialize()));
-    let args_owner = new Args();
-    args_owner.add(tokenId);
-    expect(ownerOf(args_owner.serialize())).toStrictEqual(stringToBytes(owner));
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    const tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsOwner = new Args();
+    argsOwner.add(tokenId);
+    expect(ownerOf(argsOwner.serialize())).toStrictEqual(stringToBytes(owner));
   });
   throws('TokenId not found', () => {
-    let args_owner = new Args();
-    args_owner.add<u256>(u256.One);
-    ownerOf(args_owner.serialize());
+    let argsOwner = new Args();
+    argsOwner.add<u256>(u256.One);
+    ownerOf(argsOwner.serialize());
   });
 });
 
@@ -435,39 +472,177 @@ describe('Test NFT transferFrom', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
-    mockTransferredCoins(bytesToU64(dns_alloc_cost(args.serialize())));
-    dns_alloc(args.serialize());
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
     switchUser(owner);
   });
   test('Test NFT transferFrom success', () => {
-    let args_transfer = new Args();
-    args_transfer.add(owner);
-    args_transfer.add(target);
-    let tokenId = bytesToU256(getTokenIdFromDomain(new Args().add(domain).serialize()));
-    args_transfer.add(tokenId);
-    transferFrom(args_transfer.serialize());
-    let args_owner = new Args();
-    args_owner.add(tokenId);
-    expect(ownerOf(args_owner.serialize())).toStrictEqual(stringToBytes(target));
+    let argsTransfer = new Args();
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
+    let tokenId = bytesToU256(
+      getTokenIdFromDomain(new Args().add(domain).serialize()),
+    );
+    argsTransfer.add(tokenId);
+    transferFrom(argsTransfer.serialize());
+    let argsOwner = new Args();
+    argsOwner.add(tokenId);
+    expect(ownerOf(argsOwner.serialize())).toStrictEqual(stringToBytes(target));
   });
   throws('Caller is not the owner', () => {
-    let args_transfer = new Args();
-    args_transfer.add(owner);
-    args_transfer.add(target);
+    let argsTransfer = new Args();
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
     let tokenId = getTokenIdFromDomain(new Args().add(domain).serialize());
-    args_transfer.add(tokenId);
+    argsTransfer.add(tokenId);
     switchUser(target);
-    transferFrom(args_transfer.serialize());
+    transferFrom(argsTransfer.serialize());
   });
   throws('TokenId not found', () => {
-    let args_transfer = new Args();
-    args_transfer.add(owner);
-    args_transfer.add(target);
+    let argsTransfer = new Args();
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
     let tokenId = u256.fromU32(1);
-    args_transfer.add(tokenId);
-    transferFrom(args_transfer.serialize());
+    argsTransfer.add(tokenId);
+    transferFrom(argsTransfer.serialize());
+  });
+});
+
+describe('Test NFT approve', () => {
+  beforeEach(() => {
+    resetStorage();
+    mockAdminContext(true);
+    constructor(new Args().serialize());
+    mockAdminContext(false);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+  });
+  afterEach(() => {
+    mockTransferredCoins(0);
+    switchUser(owner);
+  });
+  test('Test NFT approve success', () => {
+    let argsApprove = new Args();
+    argsApprove.add(target);
+    let tokenId = bytesToU256(
+      getTokenIdFromDomain(new Args().add(domain).serialize()),
+    );
+    argsApprove.add(tokenId);
+    approve(argsApprove.serialize());
+    switchUser(target);
+    let argsTransfer = new Args();
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
+    argsTransfer.add(tokenId);
+    let argsGetApproved = new Args();
+    argsGetApproved.add(tokenId);
+    expect(getApproved(argsGetApproved.serialize())).toStrictEqual(
+      stringToBytes(target),
+    );
+    transferFrom(argsTransfer.serialize());
+  });
+  throws('Caller is not the owner', () => {
+    let argsApprove = new Args();
+    argsApprove.add(target);
+    let tokenId = getTokenIdFromDomain(new Args().add(domain).serialize());
+    argsApprove.add(tokenId);
+    switchUser(target);
+    approve(argsApprove.serialize());
+  });
+  throws('TokenId not found', () => {
+    let argsApprove = new Args();
+    argsApprove.add(target);
+    let tokenId = u256.fromU32(1);
+    argsApprove.add(tokenId);
+    approve(argsApprove.serialize());
+  });
+});
+
+describe('Test set Owner', () => {
+  beforeEach(() => {
+    resetStorage();
+    mockAdminContext(true);
+    constructor(new Args().serialize());
+    mockAdminContext(false);
+  });
+  afterEach(() => {
+    switchUser(owner);
+    mockTransferredCoins(0);
+  });
+  test('Test set Owner', () => {
+    let args = new Args();
+    args.add(owner);
+    switchUser(owner);
+    setOwner(args.serialize());
+    let argsOwner = new Args();
+    expect(ownerAddress(argsOwner.serialize())).toStrictEqual(
+      stringToBytes(owner),
+    );
+  });
+  throws('Caller is not the owner', () => {
+    let args = new Args();
+    args.add(owner);
+    switchUser(target);
+    setOwner(args.serialize());
+  });
+});
+
+describe('Test setApprovalForAll', () => {
+  beforeEach(() => {
+    resetStorage();
+    mockAdminContext(true);
+    constructor(new Args().serialize());
+    mockAdminContext(false);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(bytesToU64(dnsAllocCost(args.serialize())));
+    dnsAlloc(args.serialize());
+  });
+  afterEach(() => {
+    mockTransferredCoins(0);
+    switchUser(owner);
+  });
+  test('Test setApprovalForAll', () => {
+    let argsApprove = new Args();
+    argsApprove.add(target);
+    argsApprove.add(true);
+    setApprovalForAll(argsApprove.serialize());
+    let argsTransfer = new Args();
+    switchUser(target);
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
+    let tokenId = bytesToU256(
+      getTokenIdFromDomain(new Args().add(domain).serialize()),
+    );
+    argsTransfer.add(tokenId);
+    const isApprovedForAllArgs = new Args();
+    isApprovedForAllArgs.add(owner);
+    isApprovedForAllArgs.add(target);
+    expect(isApprovedForAll(isApprovedForAllArgs.serialize())).toStrictEqual(
+      boolToByte(true),
+    );
+    transferFrom(argsTransfer.serialize());
+  });
+  throws('Caller is not the owner', () => {
+    let argsApprove = new Args();
+    argsApprove.add(target);
+    argsApprove.add(true);
+    switchUser(target);
+    setApprovalForAll(argsApprove.serialize());
+    let argsTransfer = new Args();
+    argsTransfer.add(owner);
+    argsTransfer.add(target);
+    let tokenId = bytesToU256(
+      getTokenIdFromDomain(new Args().add(domain).serialize()),
+    );
+    argsTransfer.add(tokenId);
+    transferFrom(argsTransfer.serialize());
   });
 });

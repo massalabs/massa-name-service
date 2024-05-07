@@ -10,6 +10,7 @@ import {
 import {
   Args,
   boolToByte,
+  bytesToString,
   bytesToU256,
   stringToBytes,
   u256ToBytes,
@@ -28,32 +29,37 @@ import {
   _update,
   _transferFrom,
 } from '@massalabs/sc-standards/assembly/contracts/NFT/NFT-internals';
+import {
+  _setOwner,
+  _onlyOwner,
+} from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
+export {
+  setOwner,
+  ownerAddress,
+} from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 import { u256 } from 'as-bignum/assembly';
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
  *
- * @param binaryArgs - Arguments serialized with Args
+ * @param _binaryArgs - Arguments serialized with Args (none)
  */
-export function constructor(binaryArgs: StaticArray<u8>): void {
+export function constructor(_binaryArgs: StaticArray<u8>): void {
   // This line is important. It ensures that this function can't be called in the future.
   // If you remove this check, someone could call your constructor function and reset your smart contract.
   assert(isDeployingContract());
-  const name = 'MassaNameService';
-  const symbol = 'MNS';
-  _constructor(name, symbol);
-  Storage.set(ADMIN_KEY, Context.caller().toString());
+  _constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
+  _setOwner(Context.caller().toString());
   return;
 }
 
 // DNS RELATED FUNCTIONS
 
-const COUNTER_KEY = stringToBytes('counter');
-const ADMIN_KEY = 'admin';
-const TOKEN_ID_KEY_PREFIX = 'token';
-const TARGET_KEY_PREFIX = 'target';
-const DOMAIN_KEY_PREFIX = 'domain';
+const COUNTER_KEY: StaticArray<u8> = [0x00];
+const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
+const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
+const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
 
 function calculateCreationCost(sizeDomain: u64): u64 {
   if (sizeDomain <= 2) {
@@ -95,50 +101,50 @@ function isValidDomain(domain: string): bool {
 }
 
 function buildTokenIdKey(domain: string): StaticArray<u8> {
-  return stringToBytes(TOKEN_ID_KEY_PREFIX + domain);
+  return TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain));
 }
 
-function buildDomainKey(tokenId: u256): string {
-  return DOMAIN_KEY_PREFIX + tokenId.toString();
+function buildDomainKey(tokenId: u256): StaticArray<u8> {
+  return DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId));
 }
 
-function buildTargetKey(domain: string): string {
-  return TARGET_KEY_PREFIX + domain;
+function buildTargetKey(domain: string): StaticArray<u8> {
+  return TARGET_KEY_PREFIX.concat(stringToBytes(domain));
 }
 
 /**
  * Register domain
- * @param binaryArgs (domain: string, target: string)
+ * @param binaryArgs - (domain: string, target: string)
  * @returns tokenId of the dns as u256
  */
-export function dns_alloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   let args = new Args(binaryArgs);
   let domain = args.nextString().unwrap();
   let target = args.nextString().unwrap();
   let owner = Context.caller().toString();
-  if (!isValidDomain(domain)) {
-    throw new Error('Invalid domain');
-  }
+
+  assert(isValidDomain(domain), 'Invalid domain');
   let domainCost = calculateCreationCost(domain.length);
-  let transferredCoins = Context.transferredCoins();
-  if (transferredCoins < domainCost) {
-    throw new Error(
-      'Insufficient funds to register domain. Provided:' +
-        transferredCoins.toString() +
-        '. Needed: ' +
-        domainCost.toString() +
-        '.',
-    );
-  }
+  // Add 0.1 MAS for storage fees
+  let transferredCoins = Context.transferredCoins() + 100_000_000;
+  assert(
+    transferredCoins >= domainCost,
+    'Insufficient funds to register domain. Provided:' +
+      transferredCoins.toString() +
+      '. Needed: ' +
+      domainCost.toString() +
+      '.',
+  );
+
   let domainKey = buildTargetKey(domain);
-  if (Storage.has(domainKey)) {
-    throw new Error('Domain already registered');
-  }
-  Storage.set(domainKey, target);
+  assert(!Storage.has(domainKey), 'Domain already registered');
+  Storage.set(domainKey, stringToBytes(target));
+
   assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
   let counter = bytesToU256(Storage.get(COUNTER_KEY));
   _update(owner, counter, '');
-  Storage.set(buildDomainKey(counter), domain);
+
+  Storage.set(buildDomainKey(counter), stringToBytes(domain));
   Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
@@ -147,15 +153,14 @@ export function dns_alloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 /**
  * Simulate domain registration
- * @param binaryArgs (domain: string)
+ * @param binaryArgs - (domain: string)
  * @returns number of coins needed to register the domain (in nanoMAS)
  */
-export function dns_alloc_cost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   let args = new Args(binaryArgs);
   let domain = args.nextString().unwrap();
-  if (!isValidDomain(domain)) {
-    throw new Error('Invalid domain');
-  }
+  assert(isValidDomain(domain), 'Invalid domain');
+
   // Add 0.1 MAS for storage fees
   let domainCost = calculateCreationCost(domain.length) + 100_000_000;
   return u64ToBytes(domainCost);
@@ -163,21 +168,19 @@ export function dns_alloc_cost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 /**
  * Free domain and refund half of the registration fee
- * @param binaryArgs (tokenId: u256)
+ * @param binaryArgs - (tokenId: u256)
  * @returns void
  */
-export function dns_free(binaryArgs: StaticArray<u8>): void {
+export function dnsFree(binaryArgs: StaticArray<u8>): void {
   let args = new Args(binaryArgs);
   let tokenId = args.nextU256().unwrap();
+
   let domainKey = buildDomainKey(tokenId);
-  if (!Storage.has(domainKey)) {
-    throw new Error('Domain not registered');
-  }
+  assert(Storage.has(domainKey), 'Domain not registered');
   let owner = _ownerOf(tokenId);
-  if (new Address(owner) != Context.caller()) {
-    throw new Error('Only owner can free domain');
-  }
-  let domain = Storage.get(domainKey);
+  assert(new Address(owner) == Context.caller(), 'Only owner can free domain');
+
+  let domain = bytesToString(Storage.get(domainKey));
   Storage.del(domainKey);
   _update('', tokenId, '');
   Storage.del(buildTargetKey(domain));
@@ -188,23 +191,23 @@ export function dns_free(binaryArgs: StaticArray<u8>): void {
 
 /**
  * Get the target address associated with a domain
- * @param args (domain: string)
+ * @param args - (domain: string)
  * @returns Address target of the domain
  */
-export function dns_resolve(args: StaticArray<u8>): StaticArray<u8> {
+export function dnsResolve(args: StaticArray<u8>): StaticArray<u8> {
   const argsObj = new Args(args);
   const domain = argsObj
     .nextString()
     .expect('domain argument is missing or invalid');
   const target = Storage.get(buildTargetKey(domain));
-  return stringToBytes(target);
+  return target;
 }
 
 /**
  * Update the target address associated with a domain. Only the owner can update the target.
- * @param binaryArgs (domain: string, newTarget: string)
+ * @param binaryArgs - (domain: string, newTarget: string)
  */
-export function dns_update_target(binaryArgs: StaticArray<u8>): void {
+export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
   const argsObj = new Args(binaryArgs);
   const domain = argsObj
     .nextString()
@@ -212,35 +215,34 @@ export function dns_update_target(binaryArgs: StaticArray<u8>): void {
   const newTarget = argsObj
     .nextString()
     .expect('target argument is missing or invalid');
+
   const tokenId = bytesToU256(Storage.get(buildTokenIdKey(domain)));
   const owner = _ownerOf(tokenId);
-  if (new Address(owner) != Context.caller()) {
-    throw new Error('Only owner can update target');
-  }
-  Storage.set(buildTargetKey(domain), newTarget);
+  assert(
+    new Address(owner) == Context.caller(),
+    'Only owner can update target',
+  );
+
+  Storage.set(buildTargetKey(domain), stringToBytes(newTarget));
 }
 
 /**
  * Upgrade the DNS smart contract bytecode
- * @param args new bytecode
+ * @param args - new bytecode
  * @returns void
  */
 export function upgradeSC(args: StaticArray<u8>): void {
-  if (Context.caller() != new Address(Storage.get(ADMIN_KEY))) {
-    return;
-  }
+  _onlyOwner();
   setBytecode(args);
 }
 
 /**
  * Transfer internal coins to another address
- * @param binaryArgs (to: string, amount: u64)
+ * @param binaryArgs - (to: string, amount: u64)
  * @returns void
  */
 export function transferInternalCoins(binaryArgs: StaticArray<u8>): void {
-  if (Context.caller() != new Address(Storage.get(ADMIN_KEY))) {
-    throw new Error('Only admin can transfer internal coins');
-  }
+  _onlyOwner();
   const argsObj = new Args(binaryArgs);
   const to = argsObj.nextString().expect('to argument is missing or invalid');
   const amount = argsObj
@@ -251,10 +253,12 @@ export function transferInternalCoins(binaryArgs: StaticArray<u8>): void {
 
 /**
  * Get the tokenId of the domain
- * @param binaryArgs (domain: string)
+ * @param binaryArgs - (domain: string)
  * @returns tokenId of the domain as u256
  */
-export function getTokenIdFromDomain(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+export function getTokenIdFromDomain(
+  binaryArgs: StaticArray<u8>,
+): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const domain = args
     .nextString()
@@ -264,15 +268,17 @@ export function getTokenIdFromDomain(binaryArgs: StaticArray<u8>): StaticArray<u
 
 /**
  * Get the domain from the tokenId
- * @param binaryArgs (tokenId: u256)
+ * @param binaryArgs - (tokenId: u256)
  * @returns domain of the tokenId
  */
-export function getDomainFromTokenId(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+export function getDomainFromTokenId(
+  binaryArgs: StaticArray<u8>,
+): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const tokenId = args
     .nextU256()
     .expect('tokenId argument is missing or invalid');
-  return stringToBytes(Storage.get(buildDomainKey(tokenId)));
+  return Storage.get(buildDomainKey(tokenId));
 }
 
 // NFT RELATED FUNCTIONS
@@ -295,7 +301,7 @@ export function symbol(): StaticArray<u8> {
 
 /**
  * Returns the number of tokens owned by the address
- * @param binaryArgs (address: string)
+ * @param binaryArgs - (address: string)
  * @returns Number of tokens owned by the address in u256 as bytes
  */
 export function balanceOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
@@ -308,7 +314,7 @@ export function balanceOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 /**
  * Get the owner of the token
- * @param binaryArgs (tokenId: u256)
+ * @param binaryArgs - (tokenId: u256)
  * @returns Address of the owner of the token
  */
 export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
@@ -325,7 +331,7 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 /**
  * Transfer token from one address to another
- * @param binaryArgs (from: string, to: string, tokenId: u256)
+ * @param binaryArgs - (from: string, to: string, tokenId: u256)
  */
 export function transferFrom(binaryArgs: StaticArray<u8>): void {
   const args = new Args(binaryArgs);
@@ -339,7 +345,7 @@ export function transferFrom(binaryArgs: StaticArray<u8>): void {
 
 /**
  * Approve the address to transfer the token
- * @param binaryArgs (to: string, tokenId: u256)
+ * @param binaryArgs - (to: string, tokenId: u256)
  */
 export function approve(binaryArgs: StaticArray<u8>): void {
   const args = new Args(binaryArgs);
@@ -352,7 +358,7 @@ export function approve(binaryArgs: StaticArray<u8>): void {
 
 /**
  * Set approval for all tokens of the owner
- * @param binaryArgs (to: string, approved: bool)
+ * @param binaryArgs - (to: string, approved: bool)
  */
 export function setApprovalForAll(binaryArgs: StaticArray<u8>): void {
   const args = new Args(binaryArgs);
@@ -365,7 +371,7 @@ export function setApprovalForAll(binaryArgs: StaticArray<u8>): void {
 
 /**
  * Get the address approved to transfer the token or empty address if none
- * @param binaryArgs (tokenId: u256)
+ * @param binaryArgs - (tokenId: u256)
  * @returns Address of the approved address
  */
 export function getApproved(binaryArgs: StaticArray<u8>): StaticArray<u8> {
@@ -378,7 +384,7 @@ export function getApproved(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 /**
  * Returns if the operator is approved to transfer the tokens of the owner
- * @param binaryArgs (owner: string, operator: string)
+ * @param binaryArgs - (owner: string, operator: string)
  * @returns Bool as bytes
  */
 export function isApprovedForAll(binaryArgs: StaticArray<u8>): StaticArray<u8> {
