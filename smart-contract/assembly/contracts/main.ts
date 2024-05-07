@@ -3,6 +3,7 @@ import {
   Address,
   Context,
   Storage,
+  balance,
   isDeployingContract,
   setBytecode,
   transferCoins,
@@ -88,11 +89,12 @@ function calculateRefund(sizeDomain: u64): u64 {
 }
 
 function isValidDomain(domain: string): bool {
-  if (domain.length < 2) {
+  if (domain.length < 2 || domain.length > 100) {
     return false;
   }
   for (let i = 0; i < domain.length; i++) {
     let c = domain.charCodeAt(i);
+    // Must be lowercase or hyphen
     if (!((c >= 48 && c <= 57) || (c >= 97 && c <= 122) || c == 45)) {
       return false;
     }
@@ -118,27 +120,16 @@ function buildTargetKey(domain: string): StaticArray<u8> {
  * @returns tokenId of the dns as u256
  */
 export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  let initialBalance = balance();
   let args = new Args(binaryArgs);
   let domain = args.nextString().unwrap();
   let target = args.nextString().unwrap();
   let owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
-  let domainCost = calculateCreationCost(domain.length);
-  // Add 0.1 MAS for storage fees
-  let transferredCoins = Context.transferredCoins() + 100_000_000;
-  assert(
-    transferredCoins >= domainCost,
-    'Insufficient funds to register domain. Provided:' +
-      transferredCoins.toString() +
-      '. Needed: ' +
-      domainCost.toString() +
-      '.',
-  );
-
-  let domainKey = buildTargetKey(domain);
-  assert(!Storage.has(domainKey), 'Domain already registered');
-  Storage.set(domainKey, stringToBytes(target));
+  let targetKey = buildTargetKey(domain);
+  assert(!Storage.has(targetKey), 'Domain already registered');
+  Storage.set(targetKey, stringToBytes(target));
 
   assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
   let counter = bytesToU256(Storage.get(COUNTER_KEY));
@@ -148,6 +139,18 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
+  let finalBalance = balance();
+  let storageCosts = initialBalance - finalBalance;
+  let domainCost = calculateCreationCost(domain.length) - storageCosts;
+  let transferredCoins = Context.transferredCoins();
+  assert(
+    transferredCoins >= domainCost,
+    'Insufficient funds to register domain. Provided:' +
+      transferredCoins.toString() +
+      '. Needed: ' +
+      domainCost.toString() +
+      '.',
+  );
   return u256ToBytes(counter);
 }
 
