@@ -1,7 +1,10 @@
 name: massa sc ci tests
 on: [push]
 jobs:
-  unit-tests:
+  sc-unit-tests:
+    defaults:
+      run:
+        working-directory: ./smart-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
