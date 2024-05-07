@@ -58,6 +58,7 @@ describe('Test DNS allocation', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Testing success alloc', () => {
@@ -67,17 +68,20 @@ describe('Test DNS allocation', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);
+    mockBalance(scAddress, transferredAmount);
     expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
   });
   test('Testing multiple alloc', () => {
     let argsCost = new Args();
     argsCost.add(domain);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     let args = new Args();
     args.add(domain);
     args.add(target);
     expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     let args2 = new Args();
     args2.add('test29087890');
     args2.add(target);
@@ -94,6 +98,7 @@ describe('Test DNS allocation', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(100_000_000);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
   throws('Invalid domain', () => {
@@ -101,6 +106,7 @@ describe('Test DNS allocation', () => {
     args.add('(invalid)');
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
   throws('Domain already exists', () => {
@@ -108,7 +114,10 @@ describe('Test DNS allocation', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
 });
@@ -121,6 +130,7 @@ describe('Test DNS free', () => {
     mockAdminContext(false);
   });
   afterEach(() => {
+    mockBalance(scAddress, 0);
     mockTransferredCoins(0);
     switchUser(owner);
   });
@@ -129,9 +139,11 @@ describe('Test DNS free', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsFree = new Args();
     argsFree.add(tokenId);
+    mockTransferredCoins(0);
     mockBalance(scAddress, transferredAmount / 2);
     dnsFree(argsFree.serialize());
   });
@@ -140,15 +152,18 @@ describe('Test DNS free', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsFree = new Args();
     argsFree.add(tokenId);
     mockBalance(scAddress, transferredAmount / 2);
+    mockTransferredCoins(0);
     dnsFree(argsFree.serialize());
     let args2 = new Args();
     args2.add(domain);
     args2.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args2.serialize());
   });
   throws('Domain not found', () => {
@@ -161,10 +176,12 @@ describe('Test DNS free', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsFree = new Args();
     argsFree.add(tokenId);
     mockBalance(scAddress, transferredAmount / 4);
+    mockTransferredCoins(0);
     dnsFree(argsFree.serialize());
   });
 });
@@ -178,6 +195,7 @@ describe('Test DNS resolve', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test success resolve', () => {
@@ -185,6 +203,7 @@ describe('Test DNS resolve', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let argsResolve = new Args();
     argsResolve.add(domain);
@@ -208,6 +227,7 @@ describe('Test DNS change target', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test success change target', () => {
@@ -215,6 +235,7 @@ describe('Test DNS change target', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let newTarget = 'AU12W92UyGW4Bd94BPniTq4Ra5yhiv6RvjazV2G9Q9GyekYkgqbme';
     let argsChange = new Args();
@@ -237,6 +258,7 @@ describe('Test DNS change target', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let argsChange = new Args();
     argsChange.add(domain);
@@ -255,6 +277,7 @@ describe('Test transfer internal coins', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test transfer internal coins', () => {
@@ -262,6 +285,7 @@ describe('Test transfer internal coins', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let argsTransfer = new Args();
     argsTransfer.add(target);
@@ -289,6 +313,7 @@ describe('Test get domain from tokenId', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test get domain from tokenId', () => {
@@ -296,6 +321,7 @@ describe('Test get domain from tokenId', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsGet = new Args();
     argsGet.add(tokenId);
@@ -308,6 +334,7 @@ describe('Test get domain from tokenId', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let argsGet = new Args();
     argsGet.add<u256>(u256.One);
@@ -324,6 +351,7 @@ describe('Test get tokenId from domain', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test get tokenId from domain', () => {
@@ -331,6 +359,7 @@ describe('Test get tokenId from domain', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsGet = new Args();
     argsGet.add(domain);
@@ -343,6 +372,7 @@ describe('Test get tokenId from domain', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let argsGet = new Args();
     argsGet.add('(invalid)');
@@ -359,6 +389,7 @@ describe('Test NFT name', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT name', () => {
@@ -377,6 +408,7 @@ describe('Test NFT symbol', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT symbol', () => {
@@ -393,6 +425,7 @@ describe('Test NFT balanceOf', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT balanceOf one elem', () => {
@@ -400,6 +433,7 @@ describe('Test NFT balanceOf', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     bytesToU256(dnsAlloc(args.serialize()));
     let argsBalance = new Args();
     argsBalance.add(owner);
@@ -412,11 +446,13 @@ describe('Test NFT balanceOf', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
     let args2 = new Args();
     args2.add('test256789');
     args2.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args2.serialize());
     let argsBalance = new Args();
     argsBalance.add(owner);
@@ -442,6 +478,7 @@ describe('Test NFT ownerOf', () => {
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT ownerOf', () => {
@@ -449,6 +486,7 @@ describe('Test NFT ownerOf', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     const tokenId = bytesToU256(dnsAlloc(args.serialize()));
     let argsOwner = new Args();
     argsOwner.add(tokenId);
@@ -471,10 +509,12 @@ describe('Test NFT transferFrom', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT transferFrom success', () => {
@@ -519,10 +559,12 @@ describe('Test NFT approve', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test NFT approve success', () => {
@@ -572,6 +614,7 @@ describe('Test set Owner', () => {
   afterEach(() => {
     switchUser(owner);
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
   });
   test('Test set Owner', () => {
     let args = new Args();
@@ -601,10 +644,12 @@ describe('Test setApprovalForAll', () => {
     args.add(domain);
     args.add(target);
     mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
     switchUser(owner);
   });
   test('Test setApprovalForAll', () => {

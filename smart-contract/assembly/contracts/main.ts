@@ -150,6 +150,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
       domainCost.toString() +
       '.',
   );
+  transferCoins(Context.caller(), transferredCoins - domainCost);
   return u256ToBytes(counter);
 }
 
@@ -159,6 +160,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @returns void
  */
 export function dnsFree(binaryArgs: StaticArray<u8>): void {
+  let initialBalance = balance();
   let args = new Args(binaryArgs);
   let tokenId = args.nextU256().unwrap();
 
@@ -172,7 +174,13 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   _update('', tokenId, '');
   Storage.del(buildTargetKey(domain));
   Storage.del(buildTokenIdKey(domain));
-  transferCoins(Context.caller(), calculateRefund(domain.length));
+  let finalBalance = balance();
+  let storageCostsRefunded = initialBalance - finalBalance;
+  let refundTotal =
+    calculateRefund(domain.length) +
+    storageCostsRefunded +
+    Context.transferredCoins();
+  transferCoins(Context.caller(), refundTotal);
   return;
 }
 
