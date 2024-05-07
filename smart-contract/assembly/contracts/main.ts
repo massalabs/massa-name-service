@@ -175,7 +175,7 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   Storage.del(buildTargetKey(domain));
   Storage.del(buildTokenIdKey(domain));
   let finalBalance = balance();
-  let storageCostsRefunded = initialBalance - finalBalance;
+  let storageCostsRefunded = finalBalance - initialBalance;
   let refundTotal =
     calculateRefund(domain.length) +
     storageCostsRefunded +
