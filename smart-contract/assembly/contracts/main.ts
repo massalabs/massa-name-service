@@ -141,7 +141,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
   let finalBalance = balance();
   let storageCosts = initialBalance - finalBalance;
-  let domainCost = calculateCreationCost(domain.length) - storageCosts;
+  let domainCost = calculateCreationCost(domain.length) + storageCosts;
   let transferredCoins = Context.transferredCoins();
   assert(
     transferredCoins >= domainCost,
