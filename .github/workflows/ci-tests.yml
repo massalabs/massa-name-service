@@ -2,9 +2,6 @@ name: massa sc ci tests
 on: [push]
 jobs:
   sc-unit-tests:
-    defaults:
-      run:
-        working-directory: ./smart-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -13,9 +10,13 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+        working-directory: ./smart-contract
 
       - name: Install
         run: npm ci
+        working-directory: ./smart-contract
 
       - name: Test
         run: npm run test
+        working-directory: ./smart-contract
+
