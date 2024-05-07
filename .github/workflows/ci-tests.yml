@@ -7,16 +7,16 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-node@v3
+        working-directory: ./smart-contract
         with:
           node-version: '18'
           cache: 'npm'
-        working-directory: ./smart-contract
 
       - name: Install
-        run: npm ci
         working-directory: ./smart-contract
+        run: npm ci
 
       - name: Test
-        run: npm run test
         working-directory: ./smart-contract
+        run: npm run test
 
