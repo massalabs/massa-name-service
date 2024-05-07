@@ -61,6 +61,8 @@ const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
 const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
 const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
 
+// Be careful if we edit the values here to increase the price, it requires to change the refund
+// logic in dnsFree function to avoid refunding more than the user paid with the old prices.
 function calculateCreationCost(sizeDomain: u64): u64 {
   if (sizeDomain <= 2) {
     return 10_000_000_000_000;
@@ -74,27 +76,26 @@ function calculateCreationCost(sizeDomain: u64): u64 {
   return 1_000_000_000;
 }
 
-function calculateRefund(sizeDomain: u64): u64 {
-  if (sizeDomain <= 2) {
-    return 10_000_000_000_000 / 2;
-  } else if (sizeDomain == 3) {
-    return 1_000_000_000_000 / 2;
-  } else if (sizeDomain == 4) {
-    return 100_000_000_000 / 2;
-  } else if (sizeDomain == 5) {
-    return 10_000_000_000 / 2;
-  }
-  return 1_000_000_000 / 2;
-}
+const VALUE_ASCII_0 = 48;
+const VALUE_ASCII_9 = 57;
+const VALUE_ASCII_A_LC = 97;
+const VALUE_ASCII_Z_LC = 122;
+const VALUE_ASCII_HYPHEN = 45;
 
 function isValidDomain(domain: string): bool {
   if (domain.length < 2 || domain.length > 100) {
     return false;
   }
   for (let i = 0; i < domain.length; i++) {
-    let c = domain.charCodeAt(i);
+    const c = domain.charCodeAt(i);
     // Must be lowercase or hyphen
-    if (!((c >= 48 && c <= 57) || (c >= 97 && c <= 122) || c == 45)) {
+    if (
+      !(
+        (c >= VALUE_ASCII_0 && c <= VALUE_ASCII_9) ||
+        (c >= VALUE_ASCII_A_LC && c <= VALUE_ASCII_Z_LC) ||
+        c == VALUE_ASCII_HYPHEN
+      )
+    ) {
       return false;
     }
   }
@@ -119,39 +120,43 @@ function buildTargetKey(domain: string): StaticArray<u8> {
  * @returns tokenId of the dns as u256
  */
 export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  let initialBalance = balance();
-  let args = new Args(binaryArgs);
-  let domain = args.nextString().unwrap();
-  let target = args.nextString().unwrap();
-  let owner = Context.caller().toString();
+  const initialBalance = balance();
+  const args = new Args(binaryArgs);
+  const domain = args
+    .nextString()
+    .expect('domain argument is missing or invalid');
+  const target = args
+    .nextString()
+    .expect('target argument is missing or invalid');
+  const owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
-  let targetKey = buildTargetKey(domain);
+  const targetKey = buildTargetKey(domain);
   assert(!Storage.has(targetKey), 'Domain already registered');
   Storage.set(targetKey, stringToBytes(target));
 
   assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
-  let counter = bytesToU256(Storage.get(COUNTER_KEY));
+  const counter = bytesToU256(Storage.get(COUNTER_KEY));
   _update(owner, counter, '');
 
   Storage.set(buildDomainKey(counter), stringToBytes(domain));
   Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
-  let finalBalance = balance();
-  let storageCosts = initialBalance - finalBalance;
-  let domainCost = calculateCreationCost(domain.length) + storageCosts;
-  let transferredCoins = Context.transferredCoins();
+  const finalBalance = balance();
+  const storageCosts = initialBalance - finalBalance;
+  const totalCost = calculateCreationCost(domain.length) + storageCosts;
+  const transferredCoins = Context.transferredCoins();
   assert(
-    transferredCoins >= domainCost,
+    transferredCoins >= totalCost,
     'Insufficient funds to register domain. Provided:' +
       transferredCoins.toString() +
       '. Needed: ' +
-      domainCost.toString() +
+      totalCost.toString() +
       '.',
   );
-  if (transferredCoins > domainCost) {
-    transferCoins(Context.caller(), transferredCoins - domainCost);
+  if (transferredCoins > totalCost) {
+    transferCoins(Context.caller(), transferredCoins - totalCost);
   }
   return u256ToBytes(counter);
 }
@@ -162,24 +167,26 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @returns void
  */
 export function dnsFree(binaryArgs: StaticArray<u8>): void {
-  let initialBalance = balance();
-  let args = new Args(binaryArgs);
-  let tokenId = args.nextU256().unwrap();
+  const initialBalance = balance();
+  const args = new Args(binaryArgs);
+  const tokenId = args
+    .nextU256()
+    .expect('tokenId argument is missing or invalid');
 
-  let domainKey = buildDomainKey(tokenId);
+  const domainKey = buildDomainKey(tokenId);
   assert(Storage.has(domainKey), 'Domain not registered');
-  let owner = _ownerOf(tokenId);
+  const owner = _ownerOf(tokenId);
   assert(new Address(owner) == Context.caller(), 'Only owner can free domain');
 
-  let domain = bytesToString(Storage.get(domainKey));
+  const domain = bytesToString(Storage.get(domainKey));
   Storage.del(domainKey);
   _update('', tokenId, '');
   Storage.del(buildTargetKey(domain));
   Storage.del(buildTokenIdKey(domain));
-  let finalBalance = balance();
-  let storageCostsRefunded = finalBalance - initialBalance;
-  let refundTotal =
-    calculateRefund(domain.length) +
+  const finalBalance = balance();
+  const storageCostsRefunded = finalBalance - initialBalance;
+  const refundTotal =
+    calculateCreationCost(domain.length) / 2 +
     storageCostsRefunded +
     Context.transferredCoins();
   transferCoins(Context.caller(), refundTotal);
