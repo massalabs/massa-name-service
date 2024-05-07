@@ -3,20 +3,21 @@ on: [push]
 jobs:
   sc-unit-tests:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./smart-contract
     steps:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-node@v3
-        working-directory: ./smart-contract
         with:
           node-version: '18'
           cache: 'npm'
+          working-directory: ./smart-contract
 
       - name: Install
-        working-directory: ./smart-contract
         run: npm ci
 
       - name: Test
-        working-directory: ./smart-contract
         run: npm run test
 
