@@ -15,7 +15,6 @@ import {
   bytesToU256,
   stringToBytes,
   u256ToBytes,
-  u64ToBytes,
 } from '@massalabs/as-types';
 import {
   _approve,
@@ -152,21 +151,6 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
       '.',
   );
   return u256ToBytes(counter);
-}
-
-/**
- * Simulate domain registration
- * @param binaryArgs - (domain: string)
- * @returns number of coins needed to register the domain (in nanoMAS)
- */
-export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  let args = new Args(binaryArgs);
-  let domain = args.nextString().unwrap();
-  assert(isValidDomain(domain), 'Invalid domain');
-
-  // Add 0.1 MAS for storage fees
-  let domainCost = calculateCreationCost(domain.length) + 100_000_000;
-  return u64ToBytes(domainCost);
 }
 
 /**
