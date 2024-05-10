@@ -76,26 +76,36 @@ function calculateCreationCost(sizeDomain: u64): u64 {
   return 1_000_000_000;
 }
 
-const VALUE_ASCII_0 = 48;
-const VALUE_ASCII_9 = 57;
-const VALUE_ASCII_A_LC = 97;
-const VALUE_ASCII_Z_LC = 122;
-const VALUE_ASCII_HYPHEN = 45;
+// @ts-ignore (fix for IDE)
+@inline
+function isNotNumber(c: i32): bool {
+  const zero = 48;
+  const nine = 57;
+  return c < zero || c > nine;
+}
 
-function isValidDomain(domain: string): bool {
+// @ts-ignore (fix for IDE)
+@inline
+function isNotLowercaseLetter(c: i32): bool {
+  const a = 97;
+  const z = 122;
+  return c < a || c > z;
+}
+
+// @ts-ignore (fix for IDE)
+@inline
+function isNotHyphen(c: i32): bool {
+  return c != 45;
+}
+
+export function isValidDomain(domain: string): bool {
   if (domain.length < 2 || domain.length > 100) {
     return false;
   }
   for (let i = 0; i < domain.length; i++) {
     const c = domain.charCodeAt(i);
     // Must be lowercase or hyphen
-    if (
-      !(
-        (c >= VALUE_ASCII_0 && c <= VALUE_ASCII_9) ||
-        (c >= VALUE_ASCII_A_LC && c <= VALUE_ASCII_Z_LC) ||
-        c == VALUE_ASCII_HYPHEN
-      )
-    ) {
+    if (isNotNumber(c) && isNotLowercaseLetter(c) && isNotHyphen(c)) {
       return false;
     }
   }
@@ -137,6 +147,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
   assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
   const counter = bytesToU256(Storage.get(COUNTER_KEY));
+  // Transfer ownership of the domain to the caller
   _update(owner, counter, '');
 
   Storage.set(buildDomainKey(counter), stringToBytes(domain));
@@ -180,6 +191,7 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
 
   const domain = bytesToString(Storage.get(domainKey));
   Storage.del(domainKey);
+  // Transfer ownership of the domain to empty address
   _update('', tokenId, '');
   Storage.del(buildTargetKey(domain));
   Storage.del(buildTokenIdKey(domain));
@@ -267,6 +279,9 @@ export function getTokenIdFromDomain(
   const domain = args
     .nextString()
     .expect('domain argument is missing or invalid');
+  if (!Storage.has(buildTokenIdKey(domain))) {
+    throw new Error('Domain not found');
+  }
   return Storage.get(buildTokenIdKey(domain));
 }
 
