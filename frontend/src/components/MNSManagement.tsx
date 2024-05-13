@@ -11,6 +11,7 @@ export function MNSManagement(props: MNSManagementProps) {
   const { connectedAccount, currentProvider } = useAccountStore();
 
   const connected = !!connectedAccount && !!currentProvider;
+
   return (
     <div className={customClass}>
       {!connected ? (
