@@ -1,5 +1,5 @@
 import { ConnectMassaWallet } from './lib/connectMassaWallets/components/ConnectMassaWallet';
-import './App.css'
+import './App.css';
 import { Card } from './components/Card';
 import { FAQ, FAQData } from './components/FAQ';
 import { Button } from '@massalabs/react-ui-kit';
@@ -8,12 +8,14 @@ import { MNSManagement } from './components/MNSManagement';
 const faqData: FAQData[] = [
   {
     question: 'What is Massa Name Service ?',
-    answer: 'Massa Name Service is a decentralized naming protocol that allows users to register a human-readable name for their Massa address. This name can be used to send and receive Massa, and to interact with smart contracts and dApps.'
+    answer:
+      'Massa Name Service is a decentralized naming protocol that allows users to register a human-readable name for their Massa address. This name can be used to send and receive Massa, and to interact with smart contracts and dApps.',
   },
   {
     question: 'How do I register a name ?',
-    answer: 'To register a name, you must connect your wallet and search for an available name. If the name is available, you can register it for a fee.'
-  }
+    answer:
+      'To register a name, you must connect your wallet and search for an available name. If the name is available, you can register it for a fee.',
+  },
 ];
 
 function App() {
@@ -25,12 +27,12 @@ function App() {
           alt="Massa logo"
           style={{ height: '64px' }}
         />
-        <Button preIcon={<img
-          src="/pu_logo.svg"
-          alt="Purrfect Universe logo"
-        />} customClass="w-40 mt-2 bg-primary border-none text-neutral ">
-        <div className="flex items-center">Trade</div>
-      </Button>
+        <Button
+          preIcon={<img src="/pu_logo.svg" alt="Purrfect Universe logo" />}
+          customClass="w-40 mt-2 bg-primary border-none text-neutral "
+        >
+          <div className="flex items-center">Trade</div>
+        </Button>
       </div>
       <div className="p-5">
         <section className="mb-4 p-2">
@@ -42,8 +44,8 @@ function App() {
           </Card>
         </section>
         <section className="mb-16">
-        <Card customClass="min-w-96 min-h-64">
-          <MNSManagement />
+          <Card customClass="flex items-center justify-center min-w-96 min-h-32">
+            <MNSManagement customClass="grow" />
           </Card>
         </section>
         <FAQ data={faqData} />
@@ -52,4 +54,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
