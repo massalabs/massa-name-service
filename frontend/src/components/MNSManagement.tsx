@@ -2,7 +2,12 @@ import { useAccountStore } from '../lib/connectMassaWallets/store';
 import { MNSClaim } from './MNSClaim';
 import { MNSList } from './MNSList';
 
-export function MNSManagement({ customClass }: { customClass?: string }) {
+interface MNSManagementProps {
+  customClass?: string;
+}
+
+export function MNSManagement(props: MNSManagementProps) {
+  const { customClass } = props;
   const { connectedAccount, currentProvider } = useAccountStore();
 
   const connected = !!connectedAccount && !!currentProvider;
@@ -15,7 +20,7 @@ export function MNSManagement({ customClass }: { customClass?: string }) {
           </h2>
         </div>
       ) : (
-        <div className="grid grid-cols-1 divide-y">
+        <div className="flex flex-col divide-y">
           <MNSClaim />
           <MNSList />
         </div>

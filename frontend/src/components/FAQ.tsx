@@ -5,7 +5,12 @@ export interface FAQData {
   answer: string;
 }
 
-export function FAQ({ data }: { data: FAQData[] }) {
+interface FAQProps {
+  data: FAQData[];
+}
+
+export function FAQ(props: FAQProps) {
+  const { data } = props;
   if (!data) return null;
   return (
     <>

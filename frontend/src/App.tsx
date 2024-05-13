@@ -8,13 +8,12 @@ import { MNSManagement } from './components/MNSManagement';
 const faqData: FAQData[] = [
   {
     question: 'What is Massa Name Service ?',
-    answer:
-      'Massa Name Service is a decentralized naming protocol that allows users to register a human-readable name for their Massa address. This name can be used to send and receive Massa, and to interact with smart contracts and dApps.',
+    answer: 'Massa Name Service is a decentralized naming ...',
   },
   {
     question: 'How do I register a name ?',
     answer:
-      'To register a name, you must connect your wallet and search for an available name. If the name is available, you can register it for a fee.',
+      'To register a name, you must connect your wallet and search for an available name...',
   },
 ];
 
