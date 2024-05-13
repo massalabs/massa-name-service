@@ -1,0 +1,54 @@
+{
+  "toast": {
+    "explorer": "view in explorer"
+  },
+  "steps": {
+    "failed-timeout": "Operation failed due to timeout, please retry with more fees."
+  },
+  "connect-wallet": {
+    "title": "Connect wallets",
+    "connected": "Connected wallets",
+    "description": "Connect wallets for {network1} and {network2}, to bridge tokens.",
+    "button": "Connect",
+    "card-destination": {
+      "from": "Ethereum wallet",
+      "to": "Massa wallet",
+      "non-massa-wallet": "Switch accounts directly within your wallet.",
+      "switch": "switch wallet",
+      "select-wallet": "Select wallet",
+      "your-wallet": "Your wallet",
+      "bearby-not-installed": "Bearby extension is either turned off or not installed. Make sure the extension is on and refresh the page.",
+      "get-bearby": "Get Bearby here",
+      "massa-station-not-detected": "Massa Station desktop app is not detected. Make sure the app is opened, or click below to install it.",
+      "get-massa-station": "Get Massa Station",
+      "massa-wallet-not-detected": "Massa Wallet is not detected. Make sure the plugin is installed, or click below to install it.",
+      "get-massa-wallet": "Get Massa Wallet",
+      "massa-wallet-no-account": "No wallet accounts found in Massa Wallet.",
+      "massa-wallet-create-account": "Create an account",
+      "not-detected": "wallet is not detected."
+    },
+    "MASSASTATION": "MassaWallet",
+    "BEARBY": "Bearby",
+    "connected-cards": {
+      "wallet-balance": "Balance: "
+    },
+    "connect-massa": {
+      "unsupported-net": "Switch to 'buildnet' in top-right corner of Station's homepage"
+    },
+    "wrong-chain": "Wrong wallet network. Please, switch to {network} in your {name} wallet settings.",
+    "connect-metamask": {
+      "connect-to-metamask": "Connect to Metamask",
+      "invalid-network": "Current network is not supported. Please, switch to {network}.",
+      "switch-network": "Switch network",
+      "no-metamask": "It seems like you don't have Metamask installed.",
+      "install-metamask": "Install Metamask"
+    },
+    "tag": {
+      "not-connected": "Not connected",
+      "connected": "Connected",
+      "wrong-chain": "Unsupported network",
+      "wrong-chain-massa-station-tooltip": "Switch to {network} in top-right corner of Station's homepage",
+      "wrong-chain-bearby-tooltip": "Switch to {network} in top-left corner of Bearby's extension"
+    }
+  }
+}
