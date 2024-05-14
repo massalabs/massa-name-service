@@ -25,6 +25,9 @@ const secretKey = getEnvVariable('WALLET_SECRET_KEY');
 const chainId = CHAIN_ID.BuildNet; // Choose the chain ID corresponding to the network you want to deploy to
 
 const testAccount = await WalletClient.getAccountFromSecretKey(secretKey);
+if (!testAccount || !testAccount.address) {
+  throw new Error('Account not found');
+}
 const client = await ClientFactory.createDefaultClient(
   DefaultProviderUrls.BUILDNET,
   chainId,
@@ -34,25 +37,27 @@ const client = await ClientFactory.createDefaultClient(
 // Claim dns
 const domain = 'testaurelien';
 const opId = await client.smartContracts().callSmartContract({
-    coins: fromMAS(10),
-    targetAddress: "AS1Xxfwr9pzTXBKfkLKkZNjmJMWimgvpESRv5GdNhmeuc1mqB2JL",
-    targetFunction: "dnsAlloc",
-    parameter: new Args().addString(domain).addString(testAccount.address!),
-    fee: fromMAS(0.01),
+  coins: fromMAS(10),
+  targetAddress: 'AS1Xxfwr9pzTXBKfkLKkZNjmJMWimgvpESRv5GdNhmeuc1mqB2JL',
+  targetFunction: 'dnsAlloc',
+  parameter: new Args().addString(domain).addString(testAccount.address),
+  fee: fromMAS(0.01),
 });
-const status = await client.smartContracts().awaitMultipleRequiredOperationStatus(opId, [EOperationStatus.SPECULATIVE_SUCCESS, EOperationStatus.SPECULATIVE_ERROR]);
-if (status === EOperationStatus.SPECULATIVE_SUCCESS) {
-    console.log('DNS claimed');
-} else {
-    const error = await client.smartContracts().getFilteredScOutputEvents({
-        start: null,
-        end: null,
-        original_operation_id: opId,
-        original_caller_address: null,
-        emitter_address: null,
-        is_final: null
-    });
-    console.error('Error claiming DNS', error);
+const status = await client
+  .smartContracts()
+  .awaitMultipleRequiredOperationStatus(opId, [
+    EOperationStatus.SPECULATIVE_SUCCESS,
+    EOperationStatus.SPECULATIVE_ERROR,
+  ]);
+if (!(status === EOperationStatus.SPECULATIVE_SUCCESS)) {
+  const error = await client.smartContracts().getFilteredScOutputEvents({
+    start: null,
+    end: null,
+    original_operation_id: opId,
+    original_caller_address: null,
+    emitter_address: null,
+    is_final: null,
+  });
 }
 
 const addressFetched = bytesToStr(
@@ -64,5 +69,3 @@ const addressFetched = bytesToStr(
     })
   ).returnValue,
 );
-
-console.log('domain', addressFetched);

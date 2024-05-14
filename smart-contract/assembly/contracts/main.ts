@@ -114,7 +114,6 @@ export function isValidDomain(domain: string): bool {
   return true;
 }
 
-
 function buildTokenIdKey(domain: string): StaticArray<u8> {
   return TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain));
 }
@@ -134,7 +133,7 @@ function buildAddressKey(address: string): StaticArray<u8> {
 /**
  * Calculate the cost of the dns allocation
  * @param binaryArgs - (domain: string, target: string)
- * 
+ *
  * @returns cost of the dns allocation as u64
  */
 export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
