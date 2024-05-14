@@ -1,5 +1,4 @@
 import { ConnectMassaWallet } from './lib/connectMassaWallets/components/ConnectMassaWallet';
-import './App.css';
 import { Card } from './components/Card';
 import { FAQ, FAQData } from './components/FAQ';
 import { Button } from '@massalabs/react-ui-kit';
