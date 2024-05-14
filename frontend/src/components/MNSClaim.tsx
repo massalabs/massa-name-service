@@ -16,7 +16,7 @@ export function MNSClaim() {
             toast.error('Please connect your wallet');
             return;
         }
-        dnsAlloc({ domain, targetAddress: connectedAccount.address() });
+        dnsAlloc({ domain, targetAddress: connectedAccount.address(), coins: price });
     }
 
     function onDomainChange(domain: string) {

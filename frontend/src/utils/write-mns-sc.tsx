@@ -1,4 +1,4 @@
-import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU64, fromMAS } from '@massalabs/massa-web3';
+import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU64 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
 import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
@@ -15,6 +15,7 @@ interface ToasterMessage {
 interface DnsAllocParams {
     domain: string;
     targetAddress: string;
+    coins?: bigint;
 }
 
 type callSmartContractOptions = {
@@ -187,7 +188,7 @@ export function useWriteMNS(client?: Client) {
             pending: "Claiming...",
             success: "Successfully claimed",
             error: "Failed to claim",
-        });
+        }, {coins: params.coins});
     }
 
     return {
