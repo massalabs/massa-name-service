@@ -1,4 +1,4 @@
-import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU64 } from '@massalabs/massa-web3';
+import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU256, bytesToU64 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
 import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
@@ -16,6 +16,10 @@ interface DnsAllocParams {
     domain: string;
     targetAddress: string;
     coins?: bigint;
+}
+
+interface DnsUserEntryListParams {
+    address: string;
 }
 
 type callSmartContractOptions = {
@@ -189,6 +193,32 @@ export function useWriteMNS(client?: Client) {
             success: "Successfully claimed",
             error: "Failed to claim",
         }, { coins: params.coins, showInProgressToast: true });
+    }
+
+    async function getUserEntryList(params: DnsUserEntryListParams) {
+        let resultBalance = await client?.smartContracts().readSmartContract({
+            targetAddress: SC_ADDRESS,
+            targetFunction: 'balanceOf',
+            parameter: new Args().addString(params.address).serialize(),
+        });
+        if (!resultBalance) {
+            toast.error('Failed to get user entry list', {duration: 5000});
+            return [];
+        }
+        let balance = bytesToU256(resultBalance.returnValue);
+        let list = [];
+        for (let i = 0; balance > 0 || i > 10000000; i++) {
+            let result = await client?.smartContracts().readSmartContract({
+                targetAddress: SC_ADDRESS,
+                targetFunction: 'entryOf',
+                parameter: new Args().addString(params.address).addU64(i).serialize(),
+            });
+            if (!result) {
+                toast.error('Failed to get user entry list', {duration: 5000});
+                return [];
+            }
+            list.push(result.returnValue);
+        }
     }
 
     return {
