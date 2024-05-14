@@ -25,6 +25,7 @@ import {
   setApprovalForAll,
   getApproved,
   isApprovedForAll,
+  dnsReverseResolve,
 } from '../contracts/main';
 import {
   balance,
@@ -377,6 +378,75 @@ describe('Test get tokenId from domain', () => {
     let argsGet = new Args();
     argsGet.add('(invalid)');
     getTokenIdFromDomain(argsGet.serialize());
+  });
+});
+
+describe('Test dnsReverseResolve', () => {
+  beforeEach(() => {
+    resetStorage();
+    mockAdminContext(true);
+    constructor(new Args().serialize());
+    mockAdminContext(false);
+  });
+  afterEach(() => {
+    mockTransferredCoins(0);
+    mockBalance(scAddress, 0);
+    switchUser(owner);
+  });
+  test('Test success reverse resolve', () => {
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
+    dnsAlloc(args.serialize());
+    let secondArgs = new Args();
+    secondArgs.add('test47843478');
+    secondArgs.add(target);
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
+    dnsAlloc(secondArgs.serialize());
+    let argsResolve = new Args();
+    argsResolve.add(target);
+    expect(dnsReverseResolve(argsResolve.serialize())).toStrictEqual(
+      stringToBytes(domain + ',test47843478'),
+    );
+  });
+  test('Test reverse resolve after updateTarget', () => {
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
+    dnsAlloc(args.serialize());
+    let newTarget = 'AU122Em8qkqegdLb1eyH8rdkSCNEf7RZLeTJve4Q2inRPGiTJ2xNv';
+    let argsChange = new Args();
+    argsChange.add(domain);
+    argsChange.add(newTarget);
+    dnsUpdateTarget(argsChange.serialize());
+    let argsResolve = new Args();
+    argsResolve.add(newTarget);
+    expect(dnsReverseResolve(argsResolve.serialize())).toStrictEqual(
+      stringToBytes(domain),
+    );
+  });
+  throws('Test reverse resolve after free', () => {
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
+    let tokenId = bytesToU256(dnsAlloc(args.serialize()));
+    let argsFree = new Args();
+    argsFree.add(tokenId);
+    mockTransferredCoins(0);
+    mockBalance(scAddress, transferredAmount);
+    dnsFree(argsFree.serialize());
+    let argsResolve = new Args();
+    argsResolve.add(target);
+    expect(dnsReverseResolve(argsResolve.serialize())).toStrictEqual(
+      stringToBytes(''),
+    );
   });
 });
 

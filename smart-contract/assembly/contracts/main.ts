@@ -15,6 +15,7 @@ import {
   bytesToU256,
   stringToBytes,
   u256ToBytes,
+  u64ToBytes,
 } from '@massalabs/as-types';
 import {
   _approve,
@@ -56,10 +57,23 @@ export function constructor(_binaryArgs: StaticArray<u8>): void {
 
 // DNS RELATED FUNCTIONS
 
-const COUNTER_KEY: StaticArray<u8> = [0x00];
-const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
-const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
-const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
+const DOMAIN_SEPARATOR_KEY: StaticArray<u8> = [0x42];
+
+const COUNTER_KEY: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
+  changetype<StaticArray<u8>>([0x00]),
+);
+const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
+  changetype<StaticArray<u8>>([0x01]),
+);
+const TARGET_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
+  changetype<StaticArray<u8>>([0x02]),
+);
+const DOMAIN_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
+  changetype<StaticArray<u8>>([0x03]),
+);
+const ADDRESS_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
+  changetype<StaticArray<u8>>([0x04]),
+);
 
 // Be careful if we edit the values here to increase the price, it requires to change the refund
 // logic in dnsFree function to avoid refunding more than the user paid with the old prices.
@@ -124,6 +138,25 @@ function buildTargetKey(domain: string): StaticArray<u8> {
   return TARGET_KEY_PREFIX.concat(stringToBytes(domain));
 }
 
+function buildAddressKey(address: string): StaticArray<u8> {
+  return ADDRESS_KEY_PREFIX.concat(stringToBytes(address));
+}
+
+/**
+ * Calculate the cost of the dns allocation
+ * @param binaryArgs - (domain: string, target: string)
+ *
+ * @returns cost of the dns allocation as u64
+ */
+export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  const args = new Args(binaryArgs);
+  const domain = args
+    .nextString()
+    .expect('domain argument is missing or invalid');
+  assert(isValidDomain(domain), 'Invalid domain');
+  return u64ToBytes(calculateCreationCost(domain.length) + 100_000_000);
+}
+
 /**
  * Register domain
  * @param binaryArgs - (domain: string, target: string)
@@ -152,6 +185,15 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
   Storage.set(buildDomainKey(counter), stringToBytes(domain));
   Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
+
+  let entries: string[] = [];
+  const addressKey = buildAddressKey(target);
+  if (Storage.has(addressKey)) {
+    entries = bytesToString(Storage.get(addressKey)).split(',');
+  }
+  entries.push(domain);
+  Storage.set(addressKey, stringToBytes(entries.join(',')));
+
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
   const finalBalance = balance();
@@ -193,7 +235,24 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   Storage.del(domainKey);
   // Transfer ownership of the domain to empty address
   _update('', tokenId, '');
-  Storage.del(buildTargetKey(domain));
+
+  let targetKey = buildTargetKey(domain);
+  let target = bytesToString(Storage.get(targetKey));
+  let addressDomains = bytesToString(
+    Storage.get(buildAddressKey(target)),
+  ).split(',');
+  const index = addressDomains.indexOf(domain);
+  addressDomains.splice(index, 1);
+  if (addressDomains.length == 0) {
+    Storage.del(buildAddressKey(target));
+  } else {
+    Storage.set(
+      buildAddressKey(target),
+      stringToBytes(addressDomains.join(',')),
+    );
+  }
+
+  Storage.del(targetKey);
   Storage.del(buildTokenIdKey(domain));
   const finalBalance = balance();
   const storageCostsRefunded = finalBalance - initialBalance;
@@ -219,6 +278,19 @@ export function dnsResolve(args: StaticArray<u8>): StaticArray<u8> {
   return target;
 }
 
+/** Get a list of domain associated with an address
+ * @param args - (address: string)
+ *
+ * @returns List of domains as string separated by comma
+ */
+export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
+  const argsObj = new Args(args);
+  const address = argsObj
+    .nextString()
+    .expect('address argument is missing or invalid');
+  return Storage.get(buildAddressKey(address));
+}
+
 /**
  * Update the target address associated with a domain. Only the owner can update the target.
  * @param binaryArgs - (domain: string, newTarget: string)
@@ -238,6 +310,29 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
     new Address(owner) == Context.caller(),
     'Only owner can update target',
   );
+
+  const previousTarget = bytesToString(Storage.get(buildTargetKey(domain)));
+  const addressDomains = bytesToString(
+    Storage.get(buildAddressKey(previousTarget)),
+  ).split(',');
+  const index = addressDomains.indexOf(domain);
+  addressDomains.splice(index, 1);
+  if (addressDomains.length == 0) {
+    Storage.del(buildAddressKey(previousTarget));
+  } else {
+    Storage.set(
+      buildAddressKey(previousTarget),
+      stringToBytes(addressDomains.join(',')),
+    );
+  }
+
+  let entries: string[] = [];
+  const addressKey = buildAddressKey(newTarget);
+  if (Storage.has(addressKey)) {
+    entries = bytesToString(Storage.get(addressKey)).split(',');
+  }
+  entries.push(domain);
+  Storage.set(addressKey, stringToBytes(entries.join(',')));
 
   Storage.set(buildTargetKey(domain), stringToBytes(newTarget));
 }
