@@ -142,7 +142,7 @@ export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
     .nextString()
     .expect('domain argument is missing or invalid');
   assert(isValidDomain(domain), 'Invalid domain');
-  return u64ToBytes(calculateCreationCost(domain.length) + 10_000_000);
+  return u64ToBytes(calculateCreationCost(domain.length) + 100_000_000);
 }
 
 /**
