@@ -1,9 +1,10 @@
-import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU256, bytesToU64 } from '@massalabs/massa-web3';
+import { Args, Client, EOperationStatus, ICallData, IDatastoreEntryInput, MAX_GAS_CALL, bytesToStr, bytesToU256, bytesToU64, u256ToBytes } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
 import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
+import { stringToBytes } from 'viem';
 
 interface ToasterMessage {
     pending: string;
@@ -20,6 +21,11 @@ interface DnsAllocParams {
 
 interface DnsUserEntryListParams {
     address: string;
+}
+
+export interface DnsUserEntryListResult {
+    domain: string;
+    tokenId: bigint;
 }
 
 type callSmartContractOptions = {
@@ -195,7 +201,7 @@ export function useWriteMNS(client?: Client) {
         }, { coins: params.coins, showInProgressToast: true });
     }
 
-    async function getUserEntryList(params: DnsUserEntryListParams) {
+    async function getUserEntryList(params: DnsUserEntryListParams): Promise<DnsUserEntryListResult[]> {
         let resultBalance = await client?.smartContracts().readSmartContract({
             targetAddress: SC_ADDRESS,
             targetFunction: 'balanceOf',
@@ -206,19 +212,65 @@ export function useWriteMNS(client?: Client) {
             return [];
         }
         let balance = bytesToU256(resultBalance.returnValue);
-        let list = [];
-        for (let i = 0; balance > 0 || i > 10000000; i++) {
-            let result = await client?.smartContracts().readSmartContract({
-                targetAddress: SC_ADDRESS,
-                targetFunction: 'entryOf',
-                parameter: new Args().addString(params.address).addU64(i).serialize(),
-            });
-            if (!result) {
+        let list: DnsUserEntryListResult[] = [];
+        let addressBytes = stringToBytes(params.address);
+        for (let i = 0n; balance > 0 && i < 10000000n; i += 128n) {
+            let listAsked: IDatastoreEntryInput[] = [];
+            const prefix = [0x04]
+            for (let j = 0n; j < 128n; j++) {
+                const tokenId = u256ToBytes(j);
+                listAsked.push({
+                    address: SC_ADDRESS,
+                    key: Uint8Array.from([...prefix, ...tokenId])
+                });
+            }
+            let results = await client?.publicApi().getDatastoreEntries(listAsked);
+            if (!results) {
                 toast.error('Failed to get user entry list', {duration: 5000});
                 return [];
             }
-            list.push(result.returnValue);
+            for (let j = 0; j < results.length; j++) {
+                let entry = results[j].candidate_value;
+                if (!entry || entry.length == 0) {
+                    continue;
+                }
+                if (compareUint8Array(entry, addressBytes)) {
+                    let tokenId = i + BigInt(j);
+                    let resultDomain = await client?.smartContracts().readSmartContract({
+                        targetAddress: SC_ADDRESS,
+                        targetFunction: 'getDomainFromTokenId',
+                        parameter: new Args().addU256(tokenId).serialize(),
+                    });
+                    if (!resultDomain) {
+                        toast.error('Failed to get user entry list', {duration: 5000});
+                        return [];
+                    }
+                    list.push({
+                        tokenId: tokenId,
+                        domain: bytesToStr(resultDomain.returnValue)
+                    });
+                    // Rate limiting
+                    await sleep(1000);
+                    balance -= 1n;
+                }
+            }
+            // Rate limiting
+            await sleep(1000);
         }
+        return list;
+    }
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    function compareUint8Array(a: Uint8Array, b: Uint8Array) {
+        if (a.length != b.length) {
+            return false;
+        }
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     return {
@@ -227,6 +279,7 @@ export function useWriteMNS(client?: Client) {
         isSuccess,
         isError,
         dnsAlloc,
-        getAllocCost
+        getAllocCost,
+        getUserEntryList
     };
 }

@@ -22,7 +22,7 @@ function minBigInt(a: bigint, b: bigint) {
   return a < b ? a : b;
 }
 
-export function useWriteSmartContract(client?: Client, isMainnet?: boolean) {
+export function useWriteSmartContract(client?: Client, isMainnet: boolean = true) {
   const [isPending, setIsPending] = useState(false);
   const [isOpPending, setIsOpPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
