@@ -8,6 +8,7 @@
         "build": "npx massa-as-compile",
         "clean": "rimraf build",
         "deploy": "npm run build && tsx src/deploy.ts",
+        "testDns": "tsx src/test.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",
         "prettier:fix": "prettier '**/src/**/*.ts' --write && as-prettier --write assembly",
         "lint": "eslint .",

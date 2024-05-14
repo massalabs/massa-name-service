@@ -15,6 +15,7 @@ import {
   bytesToU256,
   stringToBytes,
   u256ToBytes,
+  u64ToBytes,
 } from '@massalabs/as-types';
 import {
   _approve,
@@ -113,6 +114,7 @@ export function isValidDomain(domain: string): bool {
   return true;
 }
 
+
 function buildTokenIdKey(domain: string): StaticArray<u8> {
   return TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain));
 }
@@ -127,6 +129,21 @@ function buildTargetKey(domain: string): StaticArray<u8> {
 
 function buildAddressKey(address: string): StaticArray<u8> {
   return ADDRESS_KEY_PREFIX.concat(stringToBytes(address));
+}
+
+/**
+ * Calculate the cost of the dns allocation
+ * @param binaryArgs - (domain: string, target: string)
+ * 
+ * @returns cost of the dns allocation as u64
+ */
+export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  const args = new Args(binaryArgs);
+  const domain = args
+    .nextString()
+    .expect('domain argument is missing or invalid');
+  assert(isValidDomain(domain), 'Invalid domain');
+  return u64ToBytes(calculateCreationCost(domain.length) + 10_000_000);
 }
 
 /**
