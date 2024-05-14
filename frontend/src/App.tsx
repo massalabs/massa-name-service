@@ -2,7 +2,7 @@ import { ConnectMassaWallet } from './lib/connectMassaWallets/components/Connect
 import './App.css';
 import { Card } from './components/Card';
 import { FAQ, FAQData } from './components/FAQ';
-import { Button } from '@massalabs/react-ui-kit';
+import { Button, Toast } from '@massalabs/react-ui-kit';
 import { MNSManagement } from './components/MNSManagement';
 
 const faqData: FAQData[] = [
@@ -19,6 +19,8 @@ const faqData: FAQData[] = [
 
 function App() {
   return (
+    <>
+    <Toast />
     <div className="sm:w-full md:max-w-4xl mx-auto">
       <div className="flex justify-between mb-2">
         <img
@@ -50,6 +52,7 @@ function App() {
         <FAQ data={faqData} />
       </div>
     </div>
+    </>
   );
 }
 

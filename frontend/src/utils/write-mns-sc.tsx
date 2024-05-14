@@ -1,4 +1,4 @@
-import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, fromMAS } from '@massalabs/massa-web3';
+import { Args, Client, EOperationStatus, ICallData, MAX_GAS_CALL, bytesToU64, fromMAS } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
 import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
@@ -32,20 +32,23 @@ export function useWriteMNS(client?: Client) {
     const [isError, setIsError] = useState(false);
     const [opId, setOpId] = useState<string | undefined>(undefined);
 
-    async function getAllocCost(params: DnsAllocParams): Promise<number> {
-        let args = new Args();
-        args.addString(params.domain);
-        args.addString(params.targetAddress);
-        let response = await client?.smartContracts().readSmartContract({
-            targetAddress: SC_ADDRESS,
-            targetFunction: 'dnsAlloc',
-            parameter: args.serialize(),
-            fee: fromMAS(100000),
-        });
-        if (!response) {
-            return 0;
+    async function getAllocCost(params: DnsAllocParams): Promise<bigint> {
+        try {
+            let args = new Args();
+            args.addString(params.domain);
+            args.addString(params.targetAddress);
+            let response = await client?.smartContracts().readSmartContract({
+                targetAddress: SC_ADDRESS,
+                targetFunction: 'dnsAllocCost',
+                parameter: args.serialize(),
+            });
+            if (!response) {
+                return 0n;
+            }
+            return bytesToU64(response.returnValue);
+        } catch (error) {
+            return 0n;
         }
-        return response.info.gas_cost;
     }
 
     function callSmartContract(

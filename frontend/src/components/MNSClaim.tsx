@@ -3,12 +3,13 @@ import { InputWithRightText } from './InputWithRightText';
 import { useState } from 'react';
 import { useWriteMNS } from '../utils/write-mns-sc';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
+import { toMAS } from '@massalabs/massa-web3';
 
 export function MNSClaim() {
     const [domain, setDomain] = useState<string>('');
     const { connectedAccount, massaClient } = useAccountStore();
     const { dnsAlloc, getAllocCost } = useWriteMNS(massaClient);
-    const [price, setPrice] = useState<number>(0);
+    const [price, setPrice] = useState<bigint>(0n);
 
     function claim() {
         if (!connectedAccount) {
@@ -38,7 +39,7 @@ export function MNSClaim() {
                         placeholder="Enter a domain"
                         onChange={(e) => { onDomainChange(e.target.value) }}
                     />
-                    <p className="mb-4 font-light text-neutral">Price  MAS</p>
+                    <p className="mb-4 font-light text-neutral">Price {toMAS(price).toFixed(4)} MAS</p>
                 </div>
                 <Button
                     onClick={() => claim()}
