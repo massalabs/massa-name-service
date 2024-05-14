@@ -185,10 +185,10 @@ export function useWriteMNS(client?: Client) {
         args.addString(params.domain);
         args.addString(params.targetAddress);
         callSmartContract('dnsAlloc', args.serialize(), {
-            pending: "Claiming...",
+            pending: "Entry claiming in progress",
             success: "Successfully claimed",
             error: "Failed to claim",
-        }, {coins: params.coins});
+        }, { coins: params.coins, showInProgressToast: true });
     }
 
     return {
@@ -198,5 +198,5 @@ export function useWriteMNS(client?: Client) {
         isError,
         dnsAlloc,
         getAllocCost
-      };
+    };
 }
