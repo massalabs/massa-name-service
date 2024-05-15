@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
+import { useWriteMNS } from '../utils/write-mns-sc';
 import { MNSClaim } from './MNSClaim';
 import { MNSList } from './MNSList';
 
@@ -8,10 +10,23 @@ interface MNSManagementProps {
 
 export function MNSManagement(props: MNSManagementProps) {
   const { customClass } = props;
-  const { connectedAccount, currentProvider } = useAccountStore();
+  const { massaClient, connectedAccount, currentProvider } = useAccountStore();
+  const {
+    list,
+    listSpinning,
+    getUserEntryList,
+    dnsAlloc,
+    getAllocCost,
+    changeTargetAddressDnsEntry,
+    deleteDnsEntry,
+  } = useWriteMNS(massaClient);
 
   const connected = !!connectedAccount && !!currentProvider;
 
+  useEffect(() => {
+    if (!connectedAccount || !massaClient || listSpinning) return;
+    getUserEntryList({ address: connectedAccount.address() });
+  }, [connectedAccount, massaClient]);
   return (
     <div className={customClass}>
       {!connected ? (
@@ -22,8 +37,13 @@ export function MNSManagement(props: MNSManagementProps) {
         </div>
       ) : (
         <div className="flex flex-col divide-y">
-          <MNSClaim />
-          <MNSList />
+          <MNSClaim dnsAlloc={dnsAlloc} getAllocCost={getAllocCost} />
+          <MNSList
+            deleteDnsEntry={deleteDnsEntry}
+            changeTargetAddressDnsEntry={changeTargetAddressDnsEntry}
+            list={list}
+            listSpinning={listSpinning}
+          />
         </div>
       )}
     </div>

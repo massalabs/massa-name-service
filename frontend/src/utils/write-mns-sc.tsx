@@ -25,13 +25,13 @@ interface ToasterMessage {
   timeout?: string;
 }
 
-interface DnsAllocParams {
+export interface DnsAllocParams {
   domain: string;
   targetAddress: string;
   coins?: bigint;
 }
 
-interface DnsDeleteParams {
+export interface DnsDeleteParams {
   tokenId: bigint;
 }
 
@@ -39,7 +39,7 @@ interface DnsUserEntryListParams {
   address: string;
 }
 
-interface DnsChangeTargetParams {
+export interface DnsChangeTargetParams {
   domain: string;
   targetAddress: string;
 }
@@ -51,8 +51,8 @@ export interface DnsUserEntryListResult {
 }
 
 export interface DnsGetAllocCostResponse {
-    price: bigint | null;
-    error?: string;
+  price: bigint | null;
+  error?: string;
 }
 
 type callSmartContractOptions = {
@@ -72,8 +72,10 @@ export function useWriteMNS(client?: Client) {
   const [list, setList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
 
-  async function getAllocCost(params: DnsAllocParams): Promise<DnsGetAllocCostResponse> {
-    let price = 0n
+  async function getAllocCost(
+    params: DnsAllocParams,
+  ): Promise<DnsGetAllocCostResponse> {
+    let price = 0n;
     try {
       let args = new Args();
       args.addString(params.domain);
@@ -85,62 +87,73 @@ export function useWriteMNS(client?: Client) {
       });
       if (!response) {
         return {
-            price: null,
-            error: 'Failed to get alloc cost',
+          price: null,
+          error: 'Failed to get alloc cost',
         };
       }
-    price = bytesToU64(response.returnValue);
+      price = bytesToU64(response.returnValue);
     } catch (error) {
       return {
-            price: null,
-            error: 'Invalid domain name. Name can only be 2-100 characters long and can contains only lowercase letters, numbers and hyphens.',
+        price: null,
+        error:
+          'Name can only be 2-100 characters long and can contains only lowercase letters, numbers and hyphens.',
       };
     }
     try {
-        let args = new Args();
-        args.addString(params.domain);
-        let result = await client?.smartContracts().readSmartContract({
-            targetAddress: SC_ADDRESS,
-            targetFunction: 'dnsResolve',
-            parameter: args.serialize(),
-        });
-        if (!result) {
-            return {
-                price: null,
-                error: 'Failed to get alloc cost',
-            };
-        }
+      let args = new Args();
+      args.addString(params.domain);
+      let result = await client?.smartContracts().readSmartContract({
+        targetAddress: SC_ADDRESS,
+        targetFunction: 'dnsResolve',
+        parameter: args.serialize(),
+      });
+      if (!result) {
         return {
-            price: null,
-            error: `Domain already claimed by ${bytesToStr(result.returnValue)}`,
-        }
+          price: null,
+          error: 'Failed to get alloc cost',
+        };
+      }
+      return {
+        price: null,
+        error: `Domain already claimed by ${bytesToStr(result.returnValue)}`,
+      };
     } catch (error) {
-    }
-    try {
-    let resultBalance = await client?.publicApi().getAddresses([params.targetAddress]);
-    if (!resultBalance) {
-        return {
+      try {
+        let resultBalance = await client
+          ?.publicApi()
+          .getAddresses([params.targetAddress]);
+        if (!resultBalance) {
+          return {
             price: null,
             error: 'Failed to get alloc cost',
-        };
-    }
-    let balance = BigInt((parseFloat(resultBalance[0].candidate_balance) * 1_000_000_000).toFixed(0));
-    if (balance < price) {
-        return {
-            price: null,
-            error: `The price of the domain is ${toMAS(price).toFixed(4)} MAS. Your balance is ${toMAS(balance).toFixed(4)} MAS. Please top up your account.`
+          };
         }
-    }
-    } catch (error) {
-        console.log(error)
-        return {
+        let balance = BigInt(
+          (
+            parseFloat(resultBalance[0].candidate_balance) * 1_000_000_000
+          ).toFixed(0),
+        );
+        if (balance < price) {
+          return {
             price: null,
-            error: 'Your account does not exist in the Massa network. Please transfer 0.1 MAS to your account to create it on chain.',
+            error: `The price of the domain is ${toMAS(price).toFixed(
+              4,
+            )} MAS. Your balance is ${toMAS(balance).toFixed(
+              4,
+            )} MAS. Please top up your account.`,
+          };
+        }
+      } catch (error) {
+        return {
+          price: null,
+          error:
+            'Your account does not exist in the Massa network. Transfer 0.1 MAS to your account to create it onchain.',
         };
-    }
-    return {
+      }
+      return {
         price: price,
-    };
+      };
+    }
   }
 
   function callSmartContract(
@@ -218,7 +231,12 @@ export function useWriteMNS(client?: Client) {
         setIsSuccess(true);
         setIsPending(false);
         toast.dismiss(toastId);
-        getUserEntryList({address: client.wallet().getBaseAccount()?.address()!})
+        const baseAccount = client.wallet().getBaseAccount();
+        if (client && baseAccount) {
+          getUserEntryList({
+            address: baseAccount.address()!,
+          });
+        }
         toast.success((t) => (
           <ToastContent t={t}>
             <OperationToast
@@ -326,7 +344,6 @@ export function useWriteMNS(client?: Client) {
         if (!entry || entry.length == 0) {
           continue;
         }
-        console.log(entry, addressBytes);
         if (compareUint8Array(entry, addressBytes)) {
           let tokenId = i + BigInt(j);
           let resultDomain = await client?.smartContracts().readSmartContract({
@@ -367,7 +384,6 @@ export function useWriteMNS(client?: Client) {
     setListSpinning(false);
     return list;
   }
-  console.log('listSpinning in hook', listSpinning);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

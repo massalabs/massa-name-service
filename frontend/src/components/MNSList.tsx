@@ -13,25 +13,29 @@ import {
   Spinner,
   Tooltip,
 } from '@massalabs/react-ui-kit';
-import { useAccountStore } from '../lib/connectMassaWallets/store';
-import { useEffect, useState } from 'react';
-import { useWriteMNS } from '../utils/write-mns-sc';
+import { useState } from 'react';
+import {
+  DnsChangeTargetParams,
+  DnsDeleteParams,
+  DnsUserEntryListResult,
+} from '../utils/write-mns-sc';
 
-export function MNSList() {
-  const { connectedAccount, massaClient } = useAccountStore();
-  const { getUserEntryList, deleteDnsEntry, changeTargetAddressDnsEntry, list, listSpinning } =
-    useWriteMNS(massaClient);
+interface MNSListProps {
+  list: DnsUserEntryListResult[];
+  listSpinning: boolean;
+  deleteDnsEntry: (params: DnsDeleteParams) => void;
+  changeTargetAddressDnsEntry: (params: DnsChangeTargetParams) => void;
+}
 
-  console.log('listSpinning in list', listSpinning);
+export function MNSList(props: MNSListProps) {
+  const { list, listSpinning, deleteDnsEntry, changeTargetAddressDnsEntry } =
+    props;
+
   const [changeTargetModalId, setChangeTargetModalId] = useState<string | null>(
     null,
   );
   const [newTargetAddress, setNewTargetAddress] = useState<string>('');
-  
-  useEffect(() => {
-    if (!connectedAccount || !massaClient || listSpinning) return;
-    getUserEntryList({address: connectedAccount.address() })
-  }, [connectedAccount, massaClient]);
+
   return (
     <div>
       <Accordion customClass="border-none" title="Owned MNS">
