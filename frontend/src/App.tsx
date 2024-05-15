@@ -27,12 +27,14 @@ function App() {
           alt="Massa logo"
           style={{ height: '64px' }}
         />
+        <a target="_blank" href="https://www.purrfectuniverse.com/">
         <Button
           preIcon={<img src="/pu_logo.svg" alt="Purrfect Universe logo" />}
           customClass="w-40 mt-2 bg-primary border-none text-neutral "
         >
           <div className="flex items-center">Trade</div>
         </Button>
+        </a>
       </div>
       <div className="p-5">
         <section className="mb-4 p-2">

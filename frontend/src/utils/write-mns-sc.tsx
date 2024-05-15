@@ -19,12 +19,22 @@ interface DnsAllocParams {
     coins?: bigint;
 }
 
+interface DnsDeleteParams {
+    tokenId: bigint;
+}
+
 interface DnsUserEntryListParams {
     address: string;
 }
 
+interface DnsChangeTargetParams {
+    domain: string;
+    targetAddress: string;
+}
+
 export interface DnsUserEntryListResult {
     domain: string;
+    targetAddress: string;
     tokenId: bigint;
 }
 
@@ -127,11 +137,11 @@ export function useWriteMNS(client?: Client) {
                     .awaitMultipleRequiredOperationStatus(opId, [
                         EOperationStatus.SPECULATIVE_ERROR,
                         EOperationStatus.FINAL_ERROR,
-                        EOperationStatus.FINAL_SUCCESS,
+                        EOperationStatus.SPECULATIVE_SUCCESS,
                     ]);
             })
             .then((status: EOperationStatus) => {
-                if (status !== EOperationStatus.FINAL_SUCCESS) {
+                if (status !== EOperationStatus.SPECULATIVE_SUCCESS) {
                     throw new Error('Operation failed', { cause: { status } });
                 }
                 setIsSuccess(true);
@@ -245,9 +255,20 @@ export function useWriteMNS(client?: Client) {
                         toast.error('Failed to get user entry list', {duration: 5000});
                         return [];
                     }
+                    const domain = bytesToStr(resultDomain.returnValue);
+                    let targetAddress = await client?.smartContracts().readSmartContract({
+                        targetAddress: SC_ADDRESS,
+                        targetFunction: 'dnsResolve',
+                        parameter: new Args().addString(domain).serialize(),
+                    });
+                    if (!targetAddress) {
+                        toast.error('Failed to get user entry list', {duration: 5000});
+                        return [];
+                    }
                     list.push({
+                        domain: domain,
+                        targetAddress: bytesToStr(targetAddress.returnValue),
                         tokenId: tokenId,
-                        domain: bytesToStr(resultDomain.returnValue)
                     });
                     // Rate limiting
                     await sleep(1000);
@@ -273,6 +294,27 @@ export function useWriteMNS(client?: Client) {
         return true;
     }
 
+    function deleteDnsEntry(params: DnsDeleteParams) {
+        let args = new Args();
+        args.addU256(params.tokenId);
+        callSmartContract('dnsFree', args.serialize(), {
+            pending: "Entry deleting in progress",
+            success: "Successfully deleted",
+            error: "Failed to delete",
+        }, { showInProgressToast: true });
+    }
+
+    function changeTargetAddressDnsEntry(params: DnsChangeTargetParams) {
+        let args = new Args();
+        args.addString(params.domain);
+        args.addString(params.targetAddress);
+        callSmartContract('dnsUpdateTarget', args.serialize(), {
+            pending: "Updating target address in progress",
+            success: "Successfully updated",
+            error: "Failed to update",
+        }, { showInProgressToast: true });
+    }
+
     return {
         opId,
         isPending,
@@ -280,6 +322,8 @@ export function useWriteMNS(client?: Client) {
         isError,
         dnsAlloc,
         getAllocCost,
-        getUserEntryList
+        getUserEntryList,
+        deleteDnsEntry,
+        changeTargetAddressDnsEntry
     };
 }
