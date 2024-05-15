@@ -14,7 +14,7 @@ export function OperationToast({
 }: OperationToastProps) {
   return (
     <div className="inline-flex mas-h2 text-center items-between justify-center">
-      <p className="mas-body mr-4">{title}</p>
+      <p className="mas-body mr-4 text-neutral">{title}</p>
       {operationId && (
         <a
           href={generateExplorerLink(operationId, isMainnet)}

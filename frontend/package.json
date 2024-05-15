@@ -11,6 +11,7 @@
     "prettier": "prettier --check .",
     "prettier:fix": "prettier --write .",
     "fmt": "npm run prettier:fix && npm run lint:fix",
+    "fmt:check": "npm run prettier && npm run lint",
     "preview": "vite preview",
     "prepare": "husky install"
   },
