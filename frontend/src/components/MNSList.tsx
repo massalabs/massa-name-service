@@ -14,43 +14,28 @@ import {
   Tooltip,
 } from '@massalabs/react-ui-kit';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
-import { useCallback, useEffect, useState } from 'react';
-import { DnsUserEntryListResult, useWriteMNS } from '../utils/write-mns-sc';
+import { useEffect, useState } from 'react';
+import { useWriteMNS } from '../utils/write-mns-sc';
 
 export function MNSList() {
-  const { massaClient, connectedAccount } = useAccountStore();
-  const { getUserEntryList, deleteDnsEntry, changeTargetAddressDnsEntry } =
+  const { connectedAccount, massaClient } = useAccountStore();
+  const { getUserEntryList, deleteDnsEntry, changeTargetAddressDnsEntry, list, listSpinning } =
     useWriteMNS(massaClient);
-  const [spinning, setSpinning] = useState(false);
-  const [list, setList] = useState<DnsUserEntryListResult[]>([]);
 
+  console.log('listSpinning in list', listSpinning);
   const [changeTargetModalId, setChangeTargetModalId] = useState<string | null>(
     null,
   );
   const [newTargetAddress, setNewTargetAddress] = useState<string>('');
-
-  const updateDnsEntryList = useCallback(async () => {
-    if (connectedAccount && massaClient && !spinning && !list.length) {
-      setSpinning(true);
-      getUserEntryList({ address: connectedAccount.address() })
-        .then((entries) => {
-          setList(entries);
-          setSpinning(false);
-        })
-        .catch(() => {
-          setSpinning(false);
-        });
-    }
-  }, [massaClient, connectedAccount, spinning, getUserEntryList]);
-
+  
   useEffect(() => {
-    updateDnsEntryList();
-  }, [massaClient, updateDnsEntryList]);
-
+    if (!connectedAccount || !massaClient || listSpinning) return;
+    getUserEntryList({address: connectedAccount.address() })
+  }, [connectedAccount, massaClient]);
   return (
     <div>
-      <Accordion customClass="border-none" title="Entry list">
-        {spinning ? (
+      <Accordion customClass="border-none" title="Owned MNS">
+        {listSpinning ? (
           <div className="flex items-center justify-center">
             <Spinner />
           </div>
@@ -97,12 +82,12 @@ export function MNSList() {
                 <div key={idx} className="bg-secondary rounded-xl p-4 mb-4">
                   <div className="flex flex-row">
                     <div className="flex justify-between grow">
-                      <p className="mas-body my-auto">
+                      <p className="mas-body my-auto w-32">
                         {item.domain + '.massa'}
                       </p>
                       <ChevronDoubleRightIcon className="w-6" />
                       <Tooltip body={item.targetAddress}>
-                        <p className="mas-body pr-4 my-auto	">
+                        <p className="mas-body pr-4 my-auto w-28	">
                           {item.targetAddress.slice(0, 10)}...
                         </p>
                       </Tooltip>
@@ -113,8 +98,9 @@ export function MNSList() {
                         setChangeTargetModalId(item.domain);
                       }}
                     >
-                      <PencilIcon className="w-5 mr-2 my-auto" />
-                      <p className="mas-body mr-4 my-auto">Change target</p>
+                      <Tooltip body={<p className="mas-body">Change target</p>}>
+                        <PencilIcon className="w-4 pt-1" />
+                      </Tooltip>
                     </button>
                     <button
                       className="flex"
@@ -122,8 +108,9 @@ export function MNSList() {
                         deleteDnsEntry({ tokenId: item.tokenId });
                       }}
                     >
-                      <TrashIcon className="w-5 mr-2 my-auto" />
-                      <p className="mas-body my-auto">Delete</p>
+                      <Tooltip body={<p className="mas-body">Delete</p>}>
+                        <TrashIcon className="w-4 mr-2 pt-1" />
+                      </Tooltip>
                     </button>
                   </div>
                 </div>

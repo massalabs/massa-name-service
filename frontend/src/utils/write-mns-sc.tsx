@@ -8,6 +8,7 @@ import {
   bytesToStr,
   bytesToU256,
   bytesToU64,
+  toMAS,
   u256ToBytes,
 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
@@ -49,6 +50,11 @@ export interface DnsUserEntryListResult {
   tokenId: bigint;
 }
 
+export interface DnsGetAllocCostResponse {
+    price: bigint | null;
+    error?: string;
+}
+
 type callSmartContractOptions = {
   coins?: bigint;
   fee?: bigint;
@@ -63,8 +69,11 @@ export function useWriteMNS(client?: Client) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
   const [opId, setOpId] = useState<string | undefined>(undefined);
+  const [list, setList] = useState<DnsUserEntryListResult[]>([]);
+  const [listSpinning, setListSpinning] = useState(false);
 
-  async function getAllocCost(params: DnsAllocParams): Promise<bigint> {
+  async function getAllocCost(params: DnsAllocParams): Promise<DnsGetAllocCostResponse> {
+    let price = 0n
     try {
       let args = new Args();
       args.addString(params.domain);
@@ -75,12 +84,63 @@ export function useWriteMNS(client?: Client) {
         parameter: args.serialize(),
       });
       if (!response) {
-        return 0n;
+        return {
+            price: null,
+            error: 'Failed to get alloc cost',
+        };
       }
-      return bytesToU64(response.returnValue);
+    price = bytesToU64(response.returnValue);
     } catch (error) {
-      return 0n;
+      return {
+            price: null,
+            error: 'Invalid domain name. Name can only be 2-100 characters long and can contains only lowercase letters, numbers and hyphens.',
+      };
     }
+    try {
+        let args = new Args();
+        args.addString(params.domain);
+        let result = await client?.smartContracts().readSmartContract({
+            targetAddress: SC_ADDRESS,
+            targetFunction: 'dnsResolve',
+            parameter: args.serialize(),
+        });
+        if (!result) {
+            return {
+                price: null,
+                error: 'Failed to get alloc cost',
+            };
+        }
+        return {
+            price: null,
+            error: `Domain already claimed by ${bytesToStr(result.returnValue)}`,
+        }
+    } catch (error) {
+    }
+    try {
+    let resultBalance = await client?.publicApi().getAddresses([params.targetAddress]);
+    if (!resultBalance) {
+        return {
+            price: null,
+            error: 'Failed to get alloc cost',
+        };
+    }
+    let balance = BigInt((parseFloat(resultBalance[0].candidate_balance) * 1_000_000_000).toFixed(0));
+    if (balance < price) {
+        return {
+            price: null,
+            error: `The price of the domain is ${toMAS(price).toFixed(4)} MAS. Your balance is ${toMAS(balance).toFixed(4)} MAS. Please top up your account.`
+        }
+    }
+    } catch (error) {
+        console.log(error)
+        return {
+            price: null,
+            error: 'Your account does not exist in the Massa network. Please transfer 0.1 MAS to your account to create it on chain.',
+        };
+    }
+    return {
+        price: price,
+    };
   }
 
   function callSmartContract(
@@ -158,6 +218,7 @@ export function useWriteMNS(client?: Client) {
         setIsSuccess(true);
         setIsPending(false);
         toast.dismiss(toastId);
+        getUserEntryList({address: client.wallet().getBaseAccount()?.address()!})
         toast.success((t) => (
           <ToastContent t={t}>
             <OperationToast
@@ -230,6 +291,7 @@ export function useWriteMNS(client?: Client) {
   async function getUserEntryList(
     params: DnsUserEntryListParams,
   ): Promise<DnsUserEntryListResult[]> {
+    setListSpinning(true);
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
       targetFunction: 'balanceOf',
@@ -237,6 +299,7 @@ export function useWriteMNS(client?: Client) {
     });
     if (!resultBalance) {
       toast.error('Failed to get user entry list', { duration: 5000 });
+      setListSpinning(false);
       return [];
     }
     let balance = bytesToU256(resultBalance.returnValue);
@@ -255,6 +318,7 @@ export function useWriteMNS(client?: Client) {
       let results = await client?.publicApi().getDatastoreEntries(listAsked);
       if (!results) {
         toast.error('Failed to get user entry list', { duration: 5000 });
+        setListSpinning(false);
         return [];
       }
       for (let j = 0; j < results.length; j++) {
@@ -262,6 +326,7 @@ export function useWriteMNS(client?: Client) {
         if (!entry || entry.length == 0) {
           continue;
         }
+        console.log(entry, addressBytes);
         if (compareUint8Array(entry, addressBytes)) {
           let tokenId = i + BigInt(j);
           let resultDomain = await client?.smartContracts().readSmartContract({
@@ -271,6 +336,7 @@ export function useWriteMNS(client?: Client) {
           });
           if (!resultDomain) {
             toast.error('Failed to get user entry list', { duration: 5000 });
+            setListSpinning(false);
             return [];
           }
           const domain = bytesToStr(resultDomain.returnValue);
@@ -281,6 +347,7 @@ export function useWriteMNS(client?: Client) {
           });
           if (!targetAddress) {
             toast.error('Failed to get user entry list', { duration: 5000 });
+            setListSpinning(false);
             return [];
           }
           list.push({
@@ -296,8 +363,12 @@ export function useWriteMNS(client?: Client) {
       // Rate limiting
       await sleep(1000);
     }
+    setList(list);
+    setListSpinning(false);
     return list;
   }
+  console.log('listSpinning in hook', listSpinning);
+
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   function compareUint8Array(a: Uint8Array, b: Uint8Array) {
@@ -348,6 +419,8 @@ export function useWriteMNS(client?: Client) {
     isPending,
     isSuccess,
     isError,
+    list,
+    listSpinning,
     dnsAlloc,
     getAllocCost,
     getUserEntryList,

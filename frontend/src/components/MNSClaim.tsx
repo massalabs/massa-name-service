@@ -1,7 +1,7 @@
 import { Button, toast } from '@massalabs/react-ui-kit';
 import { InputWithRightText } from './InputWithRightText';
 import { useState } from 'react';
-import { useWriteMNS } from '../utils/write-mns-sc';
+import { DnsGetAllocCostResponse, useWriteMNS } from '../utils/write-mns-sc';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
 import { toMAS } from '@massalabs/massa-web3';
 
@@ -9,17 +9,21 @@ export function MNSClaim() {
   const [domain, setDomain] = useState<string>('');
   const { connectedAccount, massaClient } = useAccountStore();
   const { dnsAlloc, getAllocCost } = useWriteMNS(massaClient);
-  const [price, setPrice] = useState<bigint>(0n);
+  const [allocCost, setAllocCost] = useState<DnsGetAllocCostResponse>({price: 0n});
 
   function claim() {
     if (!connectedAccount) {
       toast.error('Please connect your wallet');
       return;
     }
+    if (!allocCost.price) {
+        toast.error('Invalid price');
+        return;
+    }
     dnsAlloc({
       domain,
       targetAddress: connectedAccount.address(),
-      coins: price,
+      coins: allocCost.price,
     });
   }
 
@@ -28,12 +32,16 @@ export function MNSClaim() {
       toast.error('Please connect your wallet');
       return;
     }
+    if (domain == '') {
+        setAllocCost({price: 0n});
+        return;
+    }
     setDomain(domain);
     getAllocCost({
       domain,
       targetAddress: connectedAccount?.address() ?? '',
     }).then((cost) => {
-      setPrice(cost);
+        setAllocCost(cost);
     });
   }
   return (
@@ -48,11 +56,19 @@ export function MNSClaim() {
               onDomainChange(e.target.value);
             }}
           />
-          <p className="mb-4 font-light text-neutral">
-            Price {toMAS(price).toFixed(4)} MAS
-          </p>
+          {
+            allocCost.price !== null ? (
+                <p className="mb-4 font-light text-neutral">
+                Price {toMAS(allocCost.price).toFixed(4)} MAS
+              </p>
+            ) : (
+                <p className="mb-4 font-light text-s-error">
+                   {allocCost.error}
+                </p>
+            )
+          }
         </div>
-        <Button onClick={() => claim()}>Claim</Button>
+        <Button disabled={allocCost.price !== null ? false : true} onClick={() => claim()}>Claim</Button>
       </div>
     </div>
   );
