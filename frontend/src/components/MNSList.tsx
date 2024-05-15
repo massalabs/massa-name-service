@@ -30,7 +30,7 @@ export function MNSList() {
   const [newTargetAddress, setNewTargetAddress] = useState<string>('');
 
   const updateDnsEntryList = useCallback(async () => {
-    if (connectedAccount && massaClient && !spinning) {
+    if (connectedAccount && massaClient && !spinning && !list.length) {
       setSpinning(true);
       getUserEntryList({ address: connectedAccount.address() })
         .then((entries) => {
