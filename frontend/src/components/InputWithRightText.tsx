@@ -1,12 +1,21 @@
 import { InputMessage, InputProps } from '@massalabs/react-ui-kit';
+import { debounce } from 'lodash';
 
 export interface InputWithRightTextProps extends InputProps {
   rightText: string;
 }
 
 export function InputWithRightText(props: InputWithRightTextProps) {
-  const { error, warning, success, disable, customClass, rightText, ...rest } =
-    props;
+  const {
+    error,
+    warning,
+    success,
+    onChange,
+    disable,
+    customClass,
+    rightText,
+    ...rest
+  } = props;
 
   const disabledClass = disable ? 'border-0' : '';
   const errorClass = error ? 'border-s-error' : '';
@@ -15,6 +24,10 @@ export function InputWithRightText(props: InputWithRightTextProps) {
   const messageClass =
     errorClass || warningClass || successClass || disabledClass;
 
+  let debouncedOnChange = onChange;
+  if (onChange) {
+    debouncedOnChange = debounce(onChange, 350);
+  }
   return (
     <div className="flex-row">
       <div className="grid-cols-2">
@@ -24,6 +37,7 @@ export function InputWithRightText(props: InputWithRightTextProps) {
             className={`w-full default-input h-12 pl-3 pr-10 mb-1 ${messageClass} ${customClass}`}
             type="text"
             disabled={disable}
+            onChange={debouncedOnChange}
             {...rest}
           />
         </div>
