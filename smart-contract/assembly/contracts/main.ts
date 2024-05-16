@@ -59,21 +59,11 @@ export function constructor(_binaryArgs: StaticArray<u8>): void {
 
 const DOMAIN_SEPARATOR_KEY: StaticArray<u8> = [0x42];
 
-const COUNTER_KEY: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
-  changetype<StaticArray<u8>>([0x00]),
-);
-const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
-  changetype<StaticArray<u8>>([0x01]),
-);
-const TARGET_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
-  changetype<StaticArray<u8>>([0x02]),
-);
-const DOMAIN_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
-  changetype<StaticArray<u8>>([0x03]),
-);
-const ADDRESS_KEY_PREFIX: StaticArray<u8> = DOMAIN_SEPARATOR_KEY.concat(
-  changetype<StaticArray<u8>>([0x04]),
-);
+const COUNTER_KEY: StaticArray<u8> = [0x00];
+const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
+const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
+const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
+const ADDRESS_KEY_PREFIX: StaticArray<u8> = [0x04];
 
 // Be careful if we edit the values here to increase the price, it requires to change the refund
 // logic in dnsFree function to avoid refunding more than the user paid with the old prices.
@@ -127,19 +117,19 @@ export function isValidDomain(domain: string): bool {
 }
 
 function buildTokenIdKey(domain: string): StaticArray<u8> {
-  return TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain));
+  return DOMAIN_SEPARATOR_KEY.concat(TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain)));
 }
 
 function buildDomainKey(tokenId: u256): StaticArray<u8> {
-  return DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId));
+  return DOMAIN_SEPARATOR_KEY.concat(DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId)));
 }
 
 function buildTargetKey(domain: string): StaticArray<u8> {
-  return TARGET_KEY_PREFIX.concat(stringToBytes(domain));
+  return DOMAIN_SEPARATOR_KEY.concat(TARGET_KEY_PREFIX.concat(stringToBytes(domain)));
 }
 
 function buildAddressKey(address: string): StaticArray<u8> {
-  return ADDRESS_KEY_PREFIX.concat(stringToBytes(address));
+  return DOMAIN_SEPARATOR_KEY.concat(ADDRESS_KEY_PREFIX.concat(stringToBytes(address)));
 }
 
 /**
