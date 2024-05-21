@@ -218,13 +218,8 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
     if (addressIsEOA(Context.caller())) {
       transferCoins(Context.caller(), amountToSend);
     } else {
-      if (functionExists(Context.caller(), 'transferInternalCoins')) {
-        call(
-          Context.caller(),
-          'transferInternalCoins',
-          new Args(),
-          amountToSend,
-        );
+      if (functionExists(Context.caller(), 'receiveCoins')) {
+        call(Context.caller(), 'receiveCoins', new Args(), amountToSend);
       }
     }
   }
@@ -280,8 +275,8 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   if (addressIsEOA(Context.caller())) {
     transferCoins(Context.caller(), refundTotal);
   } else {
-    if (functionExists(Context.caller(), 'transferInternalCoins')) {
-      call(Context.caller(), 'transferInternalCoins', new Args(), refundTotal);
+    if (functionExists(Context.caller(), 'receiveCoins')) {
+      call(Context.caller(), 'receiveCoins', new Args(), refundTotal);
     }
   }
   return;
