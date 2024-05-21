@@ -4,6 +4,8 @@ import {
   Context,
   Storage,
   balance,
+  call,
+  functionExists,
   isDeployingContract,
   setBytecode,
   transferCoins,
@@ -117,19 +119,32 @@ export function isValidDomain(domain: string): bool {
 }
 
 function buildTokenIdKey(domain: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain)));
+  return DOMAIN_SEPARATOR_KEY.concat(
+    TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain)),
+  );
 }
 
 function buildDomainKey(tokenId: u256): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId)));
+  return DOMAIN_SEPARATOR_KEY.concat(
+    DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId)),
+  );
 }
 
 function buildTargetKey(domain: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(TARGET_KEY_PREFIX.concat(stringToBytes(domain)));
+  return DOMAIN_SEPARATOR_KEY.concat(
+    TARGET_KEY_PREFIX.concat(stringToBytes(domain)),
+  );
 }
 
 function buildAddressKey(address: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(ADDRESS_KEY_PREFIX.concat(stringToBytes(address)));
+  return DOMAIN_SEPARATOR_KEY.concat(
+    ADDRESS_KEY_PREFIX.concat(stringToBytes(address)),
+  );
+}
+
+function addressIsEOA(address: Address): bool {
+  const stringAddress = address.toString();
+  return stringAddress.startsWith('AU');
 }
 
 /**
@@ -199,7 +214,19 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
       '.',
   );
   if (transferredCoins > totalCost) {
-    transferCoins(Context.caller(), transferredCoins - totalCost);
+    const amountToSend = transferredCoins - totalCost;
+    if (addressIsEOA(Context.caller())) {
+      transferCoins(Context.caller(), amountToSend);
+    } else {
+      if (functionExists(Context.caller(), 'transferInternalCoins')) {
+        call(
+          Context.caller(),
+          'transferInternalCoins',
+          new Args(),
+          amountToSend,
+        );
+      }
+    }
   }
   return u256ToBytes(counter);
 }
@@ -250,7 +277,13 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
     calculateCreationCost(domain.length) / 2 +
     storageCostsRefunded +
     Context.transferredCoins();
-  transferCoins(Context.caller(), refundTotal);
+  if (addressIsEOA(Context.caller())) {
+    transferCoins(Context.caller(), refundTotal);
+  } else {
+    if (functionExists(Context.caller(), 'transferInternalCoins')) {
+      call(Context.caller(), 'transferInternalCoins', new Args(), refundTotal);
+    }
+  }
   return;
 }
 

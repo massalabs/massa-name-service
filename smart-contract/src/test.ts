@@ -38,7 +38,7 @@ const client = await ClientFactory.createDefaultClient(
 const domain = 'testaurelien';
 const opId = await client.smartContracts().callSmartContract({
   coins: fromMAS(10),
-  targetAddress: 'AS1Xxfwr9pzTXBKfkLKkZNjmJMWimgvpESRv5GdNhmeuc1mqB2JL',
+  targetAddress: 'AS1MbHVdYjMLNshxF7koLkstXbX7RGJoN2bqb2BjTK3WAQEWpECX',
   targetFunction: 'dnsAlloc',
   parameter: new Args().addString(domain).addString(testAccount.address),
   fee: fromMAS(0.01),
@@ -63,7 +63,7 @@ if (!(status === EOperationStatus.SPECULATIVE_SUCCESS)) {
 const addressFetched = bytesToStr(
   (
     await client.smartContracts().readSmartContract({
-      targetAddress: 'AS1Xxfwr9pzTXBKfkLKkZNjmJMWimgvpESRv5GdNhmeuc1mqB2JL',
+      targetAddress: 'AS1MbHVdYjMLNshxF7koLkstXbX7RGJoN2bqb2BjTK3WAQEWpECX',
       targetFunction: 'dnsResolve',
       parameter: new Args().addString(domain),
     })
