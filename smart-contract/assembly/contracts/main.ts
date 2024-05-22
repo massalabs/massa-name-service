@@ -35,6 +35,7 @@ import {
 import {
   _setOwner,
   _onlyOwner,
+  _isOwner,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
 export {
   setOwner,
@@ -54,6 +55,7 @@ export function constructor(_binaryArgs: StaticArray<u8>): void {
   _constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
   _setOwner(Context.caller().toString());
+  Storage.set(buildLockedKey(), u256ToBytes(u256.Zero));
   return;
 }
 
@@ -66,6 +68,7 @@ const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
 const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
 const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
 const ADDRESS_KEY_PREFIX: StaticArray<u8> = [0x04];
+const LOCKED_KEY_PREFIX: StaticArray<u8> = [0x05];
 
 // Be careful if we edit the values here to increase the price, it requires to change the refund
 // logic in dnsFree function to avoid refunding more than the user paid with the old prices.
@@ -142,9 +145,21 @@ function buildAddressKey(address: string): StaticArray<u8> {
   );
 }
 
+function buildLockedKey(): StaticArray<u8> {
+  return DOMAIN_SEPARATOR_KEY.concat(LOCKED_KEY_PREFIX);
+}
+
 function addressIsEOA(address: Address): bool {
   const stringAddress = address.toString();
   return stringAddress.startsWith('AU');
+}
+
+/**
+ * Unlock the domain allocation process to the public
+ */
+export function dnsUnlock(_: StaticArray<u8>): void {
+  _onlyOwner();
+  Storage.del(buildLockedKey());
 }
 
 /**
@@ -168,6 +183,9 @@ export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @returns tokenId of the dns as u256
  */
 export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
+  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+    throw new Error('Domain allocation is locked');
+  }
   const initialBalance = balance();
   const args = new Args(binaryArgs);
   const domain = args

@@ -26,6 +26,7 @@ import {
   getApproved,
   isApprovedForAll,
   dnsReverseResolve,
+  dnsUnlock,
 } from '../contracts/main';
 import {
   balance,
@@ -120,6 +121,29 @@ describe('Test DNS allocation', () => {
     mockTransferredCoins(transferredAmount);
     mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
+  });
+  throws('Alloc while locked', () => {
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(transferredAmount);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockBalance(scAddress, transferredAmount);
+    switchUser(target);
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+  });
+  test('Alloc after unlock', () => {
+    dnsUnlock(new Args().serialize());
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(transferredAmount);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockBalance(scAddress, transferredAmount);
+    switchUser(target);
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
   });
 });
 
