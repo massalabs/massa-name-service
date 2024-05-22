@@ -26,6 +26,8 @@ import {
   getApproved,
   isApprovedForAll,
   dnsReverseResolve,
+  dnsUnlock,
+  dnsLock,
 } from '../contracts/main';
 import {
   balance,
@@ -121,6 +123,42 @@ describe('Test DNS allocation', () => {
     mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
+  throws('Alloc while locked', () => {
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(transferredAmount);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockBalance(scAddress, transferredAmount);
+    switchUser(target);
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+  });
+  test('Alloc after unlock', () => {
+    dnsUnlock(new Args().serialize());
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(transferredAmount);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockBalance(scAddress, transferredAmount);
+    switchUser(target);
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+  });
+  throws('Alloc after unlock and lock', () => {
+    dnsUnlock(new Args().serialize());
+    dnsLock(new Args().serialize());
+    let argsCost = new Args();
+    argsCost.add(domain);
+    mockTransferredCoins(transferredAmount);
+    let args = new Args();
+    args.add(domain);
+    args.add(target);
+    mockBalance(scAddress, transferredAmount);
+    switchUser(target);
+    expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+  });
 });
 
 describe('Test DNS free', () => {
@@ -129,6 +167,7 @@ describe('Test DNS free', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockBalance(scAddress, 0);
@@ -193,6 +232,7 @@ describe('Test DNS resolve', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -275,6 +315,7 @@ describe('Test transfer internal coins', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -311,6 +352,7 @@ describe('Test get domain from tokenId', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -349,6 +391,7 @@ describe('Test get tokenId from domain', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -387,6 +430,7 @@ describe('Test dnsReverseResolve', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -456,6 +500,7 @@ describe('Test NFT name', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -475,6 +520,7 @@ describe('Test NFT symbol', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -492,6 +538,7 @@ describe('Test NFT balanceOf', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -545,6 +592,7 @@ describe('Test NFT ownerOf', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     mockTransferredCoins(0);
@@ -575,6 +623,7 @@ describe('Test NFT transferFrom', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
     let args = new Args();
     args.add(domain);
     args.add(target);
@@ -625,6 +674,7 @@ describe('Test NFT approve', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
     let args = new Args();
     args.add(domain);
     args.add(target);
@@ -680,6 +730,7 @@ describe('Test set Owner', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
   });
   afterEach(() => {
     switchUser(owner);
@@ -710,6 +761,7 @@ describe('Test setApprovalForAll', () => {
     mockAdminContext(true);
     constructor(new Args().serialize());
     mockAdminContext(false);
+    dnsUnlock(new Args().serialize());
     let args = new Args();
     args.add(domain);
     args.add(target);
