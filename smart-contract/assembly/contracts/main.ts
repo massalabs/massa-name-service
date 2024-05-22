@@ -155,7 +155,15 @@ function addressIsEOA(address: Address): bool {
 }
 
 /**
- * Unlock the domain allocation process to the public
+ * Lock the contract
+ */
+export function dnsLock(_: StaticArray<u8>): void {
+  _onlyOwner();
+  Storage.set(buildLockedKey(), u256ToBytes(u256.Zero));
+}
+
+/**
+ * Unlock the contract
  */
 export function dnsUnlock(_: StaticArray<u8>): void {
   _onlyOwner();
@@ -250,6 +258,9 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @returns void
  */
 export function dnsFree(binaryArgs: StaticArray<u8>): void {
+  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+    throw new Error('Free is locked');
+  }
   const initialBalance = balance();
   const args = new Args(binaryArgs);
   const tokenId = args
@@ -332,6 +343,9 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
  * @param binaryArgs - (domain: string, newTarget: string)
  */
 export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
+  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+    throw new Error('Update Target is locked');
+  }
   const argsObj = new Args(binaryArgs);
   const domain = argsObj
     .nextString()
@@ -484,6 +498,9 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @param binaryArgs - (from: string, to: string, tokenId: u256)
  */
 export function transferFrom(binaryArgs: StaticArray<u8>): void {
+  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+    throw new Error('Transfer is locked');
+  }
   const args = new Args(binaryArgs);
   const from = args.nextString().expect('from argument is missing or invalid');
   const to = args.nextString().expect('to argument is missing or invalid');
