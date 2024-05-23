@@ -3,5 +3,6 @@ module.exports = {
   plugins: ['html', 'import'],
   rules: {
     'no-console': 'off',
+    'max-len': ['error', { ignoreStrings: true, code: 120 }],
   },
 };
