@@ -44,6 +44,12 @@ export interface DnsChangeTargetParams {
   targetAddress: string;
 }
 
+export interface DnsTransferParams {
+  currentOwner: string;
+  newOwner: string;
+  tokenId: bigint;
+}
+
 export interface DnsUserEntryListResult {
   domain: string;
   targetAddress: string;
@@ -115,7 +121,7 @@ export function useWriteMNS(client?: Client) {
       }
       return {
         price: null,
-        error: `Domain already claimed by ${bytesToStr(result.returnValue)}`,
+        error: `Domain already registered by ${bytesToStr(result.returnValue)}`,
       };
     } catch (error) {
       try {
@@ -298,9 +304,9 @@ export function useWriteMNS(client?: Client) {
       'dnsAlloc',
       args.serialize(),
       {
-        pending: 'Entry claiming in progress',
-        success: 'Successfully claimed',
-        error: 'Failed to claim',
+        pending: 'Entry registering in progress',
+        success: 'Successfully registered',
+        error: 'Failed to register',
       },
       { coins: params.coins, showInProgressToast: true },
     );
@@ -430,6 +436,25 @@ export function useWriteMNS(client?: Client) {
     );
   }
 
+  function changeOwnershipDnsEntry(params: DnsTransferParams) {
+    let args = new Args();
+    console.log(params.tokenId);
+    console.log(params.currentOwner);
+    args.addString(params.currentOwner);
+    args.addString(params.newOwner);
+    args.addU256(params.tokenId);
+    callSmartContract(
+      'transferFrom',
+      args.serialize(),
+      {
+        pending: 'Updating ownership in progress',
+        success: 'Successfully updated',
+        error: 'Failed to update',
+      },
+      { showInProgressToast: true },
+    );
+  }
+
   return {
     opId,
     isPending,
@@ -442,5 +467,6 @@ export function useWriteMNS(client?: Client) {
     getUserEntryList,
     deleteDnsEntry,
     changeTargetAddressDnsEntry,
+    changeOwnershipDnsEntry,
   };
 }

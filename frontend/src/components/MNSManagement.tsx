@@ -19,6 +19,7 @@ export function MNSManagement(props: MNSManagementProps) {
     getAllocCost,
     changeTargetAddressDnsEntry,
     deleteDnsEntry,
+    changeOwnershipDnsEntry,
   } = useWriteMNS(massaClient);
 
   const connected = !!connectedAccount && !!currentProvider;
@@ -41,6 +42,7 @@ export function MNSManagement(props: MNSManagementProps) {
           <MNSList
             deleteDnsEntry={deleteDnsEntry}
             changeTargetAddressDnsEntry={changeTargetAddressDnsEntry}
+            changeOwnershipDnsEntry={changeOwnershipDnsEntry}
             list={list}
             listSpinning={listSpinning}
           />

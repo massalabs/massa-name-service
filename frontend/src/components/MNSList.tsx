@@ -1,4 +1,5 @@
 import {
+  ArrowsRightLeftIcon,
   ChevronDoubleRightIcon,
   PencilIcon,
   TrashIcon,
@@ -17,23 +18,37 @@ import { useState } from 'react';
 import {
   DnsChangeTargetParams,
   DnsDeleteParams,
+  DnsTransferParams,
   DnsUserEntryListResult,
 } from '../utils/write-mns-sc';
+import { useAccountStore } from '../lib/connectMassaWallets/store';
 
 interface MNSListProps {
   list: DnsUserEntryListResult[];
   listSpinning: boolean;
   deleteDnsEntry: (params: DnsDeleteParams) => void;
   changeTargetAddressDnsEntry: (params: DnsChangeTargetParams) => void;
+  changeOwnershipDnsEntry: (params: DnsTransferParams) => void;
 }
 
 export function MNSList(props: MNSListProps) {
-  const { list, listSpinning, deleteDnsEntry, changeTargetAddressDnsEntry } =
-    props;
-
+  const {
+    list,
+    listSpinning,
+    deleteDnsEntry,
+    changeTargetAddressDnsEntry,
+    changeOwnershipDnsEntry,
+  } = props;
+  const { connectedAccount } = useAccountStore();
   const [changeTargetModalId, setChangeTargetModalId] = useState<string | null>(
     null,
   );
+
+  const [changeOwnershipModalId, setChangeOwnershipModalId] = useState<{
+    domain: string;
+    tokenId: bigint;
+  } | null>(null);
+  const [newOwnerAddress, setNewOwnerAddress] = useState<string>('');
   const [newTargetAddress, setNewTargetAddress] = useState<string>('');
 
   return (
@@ -81,6 +96,45 @@ export function MNSList(props: MNSListProps) {
                 </PopupModal>
               </div>
             )}
+            {changeOwnershipModalId && (
+              <div className="fixed inset-0 flex items-center justify-center">
+                <PopupModal onClose={() => setChangeOwnershipModalId(null)}>
+                  <PopupModalHeader customClassHeader="mb-8">
+                    <h2 className="mas-h2">
+                      Transfer ownership of {changeOwnershipModalId.domain}
+                      .massa
+                    </h2>
+                  </PopupModalHeader>
+                  <PopupModalContent>
+                    <p className="mas-body pb-2">New owner Address</p>
+                    <Input
+                      customClass="w-96 border-none mb-8"
+                      placeholder="Enter a new owner address"
+                      onChange={(e) => {
+                        setNewOwnerAddress(e.target.value);
+                      }}
+                    />
+                    <div className="flex flex-row-reverse pb-12">
+                      <div className="w-32">
+                        <Button
+                          onClick={() => {
+                            if (!connectedAccount) return;
+                            changeOwnershipDnsEntry({
+                              currentOwner: connectedAccount.address(),
+                              newOwner: newOwnerAddress,
+                              tokenId: changeOwnershipModalId.tokenId,
+                            });
+                            setChangeOwnershipModalId(null);
+                          }}
+                        >
+                          <div>Save</div>
+                        </Button>
+                      </div>
+                    </div>
+                  </PopupModalContent>
+                </PopupModal>
+              </div>
+            )}
             <div>
               {list.map((item, idx) => (
                 <div key={idx} className="bg-secondary rounded-xl p-4 mb-4">
@@ -104,6 +158,21 @@ export function MNSList(props: MNSListProps) {
                     >
                       <Tooltip body={<p className="mas-body">Change target</p>}>
                         <PencilIcon className="w-4 pt-1" />
+                      </Tooltip>
+                    </button>
+                    <button
+                      className="flex"
+                      onClick={() => {
+                        setChangeOwnershipModalId({
+                          domain: item.domain,
+                          tokenId: item.tokenId,
+                        });
+                      }}
+                    >
+                      <Tooltip
+                        body={<p className="mas-body">Change ownership</p>}
+                      >
+                        <ArrowsRightLeftIcon className="w-4 pt-1" />
                       </Tooltip>
                     </button>
                     <button

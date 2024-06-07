@@ -75,7 +75,7 @@ export function MNSClaim(props: MNSClaimProps) {
           disabled={allocCost.price !== null ? false : true}
           onClick={() => claim()}
         >
-          Claim
+          Register
         </Button>
       </div>
     </div>
