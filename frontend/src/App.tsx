@@ -13,12 +13,12 @@ const faqData: FAQData[] = [
   {
     question: 'How do I register a name ?',
     answer:
-      'To register a name, you need to connect your Massa wallet and enter the name you want to register in the claim section. If the name is available, you can claim it by paying the registration fee.',
+      'To register a name, you need to connect your Massa wallet and enter the name you want to register in the register section. If the name is available, you can register it by paying the registration fee.',
   },
   {
     question: 'How much does it cost to register a name ?',
     answer:
-      'The cost depends on the size of the name. 10000 coins for 2 characters, 1000 coins for 3 characters, 100 coins for 4 characters, 10 coins for 5 characters and 1 coin for 6 and more characters. An little additional amount is taken to cover storage fees. You can see the exact price while typing a domain in the claim section.',
+      'The cost depends on the size of the name. 10000 coins for 2 characters, 1000 coins for 3 characters, 100 coins for 4 characters, 10 coins for 5 characters and 1 coin for 6 and more characters. An little additional amount is taken to cover storage fees. You can see the exact price while typing a domain in the register section.',
   },
   {
     question: 'How do I transfer a name ?',
