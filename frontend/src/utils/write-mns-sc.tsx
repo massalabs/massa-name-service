@@ -3,20 +3,17 @@ import {
   Client,
   EOperationStatus,
   ICallData,
-  IDatastoreEntryInput,
   MAX_GAS_CALL,
   bytesToStr,
-  bytesToU256,
   bytesToU64,
   toMAS,
-  u256ToBytes,
 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
 import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
-import { stringToBytes } from 'viem';
+import { ExplorerApiClient } from '../ExplorerApiClient';
 
 interface ToasterMessage {
   pending: string;
@@ -71,6 +68,7 @@ export function useWriteMNS(client?: Client) {
   const [opId, setOpId] = useState<string | undefined>(undefined);
   const [list, setList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
+  const explorer_api = new ExplorerApiClient();
 
   async function getAllocCost(
     params: DnsAllocParams,
@@ -310,6 +308,7 @@ export function useWriteMNS(client?: Client) {
     params: DnsUserEntryListParams,
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
+    // let map_list_asked: Map<string, number> = new Map();
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
       targetFunction: 'balanceOf',
@@ -320,83 +319,24 @@ export function useWriteMNS(client?: Client) {
       setListSpinning(false);
       return [];
     }
-    let balance = bytesToU256(resultBalance.returnValue);
+
     let list: DnsUserEntryListResult[] = [];
-    let addressBytes = stringToBytes(params.address);
-    for (let i = 0n; balance > 0 && i < 10000000n; i += 128n) {
-      let listAsked: IDatastoreEntryInput[] = [];
-      const prefix = [0x04];
-      for (let j = 0n; j < 128n; j++) {
-        const tokenId = u256ToBytes(j);
-        listAsked.push({
-          address: SC_ADDRESS,
-          key: Uint8Array.from([...prefix, ...tokenId]),
-        });
-      }
-      let results = await client?.publicApi().getDatastoreEntries(listAsked);
-      if (!results) {
-        toast.error('Failed to get user entry list', { duration: 5000 });
-        setListSpinning(false);
-        return [];
-      }
-      for (let j = 0; j < results.length; j++) {
-        let entry = results[j].candidate_value;
-        if (!entry || entry.length == 0) {
-          continue;
-        }
-        if (compareUint8Array(entry, addressBytes)) {
-          let tokenId = i + BigInt(j);
-          let resultDomain = await client?.smartContracts().readSmartContract({
-            targetAddress: SC_ADDRESS,
-            targetFunction: 'getDomainFromTokenId',
-            parameter: new Args().addU256(tokenId).serialize(),
-          });
-          if (!resultDomain) {
-            toast.error('Failed to get user entry list', { duration: 5000 });
-            setListSpinning(false);
-            return [];
-          }
-          const domain = bytesToStr(resultDomain.returnValue);
-          let targetAddress = await client?.smartContracts().readSmartContract({
-            targetAddress: SC_ADDRESS,
-            targetFunction: 'dnsResolve',
-            parameter: new Args().addString(domain).serialize(),
-          });
-          if (!targetAddress) {
-            toast.error('Failed to get user entry list', { duration: 5000 });
-            setListSpinning(false);
-            return [];
-          }
-          list.push({
-            domain: domain,
-            targetAddress: bytesToStr(targetAddress.returnValue),
-            tokenId: tokenId,
-          });
-          // Rate limiting
-          await sleep(1000);
-          balance -= 1n;
-        }
-      }
-      // Rate limiting
-      await sleep(1000);
+
+    let domains = await explorer_api.getDomainOwnedByAddress(params.address);
+
+    let dns_infos = await explorer_api.getDomainsInfo(domains);
+
+    for (const domain in dns_infos) {
+      list.push({
+        domain: domain,
+        targetAddress: dns_infos[domain].target_address,
+        tokenId: dns_infos[domain].tokenId,
+      });
     }
+
     setList(list);
     setListSpinning(false);
     return list;
-  }
-
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-  function compareUint8Array(a: Uint8Array, b: Uint8Array) {
-    if (a.length != b.length) {
-      return false;
-    }
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   function deleteDnsEntry(params: DnsDeleteParams) {
