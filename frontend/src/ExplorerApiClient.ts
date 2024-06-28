@@ -22,8 +22,8 @@ export class ExplorerApiClient {
         .then((response) => {
           resolve(response.data[address]);
         })
-        .catch((_error) => {
-          reject('error getting domain owned by address');
+        .catch((error) => {
+          reject(error);
         });
     });
   }
@@ -35,8 +35,8 @@ export class ExplorerApiClient {
         .then((response) => {
           resolve(response.data);
         })
-        .catch((_error) => {
-          reject('error getting domains info');
+        .catch((error) => {
+          reject(error);
         });
     });
   }
