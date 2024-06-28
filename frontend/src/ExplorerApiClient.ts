@@ -23,7 +23,7 @@ export class ExplorerApiClient {
           resolve(response.data[address]);
         })
         .catch((_error) => {
-          reject("error getting domain owned by address");
+          reject('error getting domain owned by address');
         });
     });
   }
@@ -36,7 +36,7 @@ export class ExplorerApiClient {
           resolve(response.data);
         })
         .catch((_error) => {
-          reject("error getting domains info");
+          reject('error getting domains info');
         });
     });
   }

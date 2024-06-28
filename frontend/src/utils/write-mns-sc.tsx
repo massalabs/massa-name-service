@@ -342,7 +342,6 @@ export function useWriteMNS(client?: Client) {
       }
     }
 
-
     setList(list);
     setListSpinning(false);
     return list;
