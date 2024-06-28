@@ -349,7 +349,7 @@ export function useWriteMNS(client?: Client) {
 
   function deleteDnsEntry(params: DnsDeleteParams) {
     let args = new Args();
-    args.addU256(params.tokenId);
+    args.addU256(BigInt(params.tokenId));
     callSmartContract(
       'dnsFree',
       args.serialize(),
@@ -380,11 +380,9 @@ export function useWriteMNS(client?: Client) {
 
   function changeOwnershipDnsEntry(params: DnsTransferParams) {
     let args = new Args();
-    console.log(params.tokenId);
-    console.log(params.currentOwner);
     args.addString(params.currentOwner);
     args.addString(params.newOwner);
-    args.addU256(params.tokenId);
+    args.addU256(BigInt(params.tokenId));
     callSmartContract(
       'transferFrom',
       args.serialize(),
