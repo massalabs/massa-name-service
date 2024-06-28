@@ -1,5 +1,11 @@
 import axios from 'axios';
 
+interface DomainInfo {
+  domain: string,
+  target_address: string
+  tokenId: bigint
+}
+
 export class ExplorerApiClient {
   private url_api: string;
 
@@ -23,7 +29,7 @@ export class ExplorerApiClient {
     });
   }
 
-  async getDomainsInfo(domains: string[]): Promise<any> {
+  async getDomainsInfo(domains: string[]): Promise<DomainInfo[]> {
     return new Promise((resolve, reject) => {
       axios
         .get(this.url_api + '/dns/info', { params: { dns: domains } })
