@@ -23,7 +23,6 @@ export class ExplorerApiClient {
           resolve(response.data[address]);
         })
         .catch((error) => {
-          console.error(error);
           reject(error);
         });
     });
@@ -37,7 +36,6 @@ export class ExplorerApiClient {
           resolve(response.data);
         })
         .catch((error) => {
-          console.error(error);
           reject(error);
         });
     });
