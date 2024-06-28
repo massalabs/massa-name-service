@@ -68,7 +68,7 @@ export function useWriteMNS(client?: Client) {
   const [opId, setOpId] = useState<string | undefined>(undefined);
   const [list, setList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
-  const explorer_api = new ExplorerApiClient();
+  const explorerApi = new ExplorerApiClient();
 
   async function getAllocCost(
     params: DnsAllocParams,
@@ -308,7 +308,6 @@ export function useWriteMNS(client?: Client) {
     params: DnsUserEntryListParams,
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
-    // let map_list_asked: Map<string, number> = new Map();
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
       targetFunction: 'balanceOf',
@@ -322,15 +321,15 @@ export function useWriteMNS(client?: Client) {
 
     let list: DnsUserEntryListResult[] = [];
 
-    let domains = await explorer_api.getDomainOwnedByAddress(params.address);
+    let domains = await explorerApi.getDomainOwnedByAddress(params.address);
 
-    let dns_infos = await explorer_api.getDomainsInfo(domains);
+    let dnsInfos = await explorerApi.getDomainsInfo(domains);
 
-    for (const domain in dns_infos) {
+    for (const domain in dnsInfos) {
       list.push({
         domain: domain,
-        targetAddress: dns_infos[domain].target_address,
-        tokenId: dns_infos[domain].tokenId,
+        targetAddress: dnsInfos[domain].target_address,
+        tokenId: dnsInfos[domain].tokenId,
       });
     }
 
