@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 interface DomainInfo {
-  domain: string,
-  target_address: string
-  tokenId: bigint
+  domain: string;
+  target_address: string;
+  tokenId: bigint;
 }
 
 export class ExplorerApiClient {
