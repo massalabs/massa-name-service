@@ -326,11 +326,13 @@ export function useWriteMNS(client?: Client) {
     let dnsInfos = await explorerApi.getDomainsInfo(domains);
 
     for (const domain in dnsInfos) {
-      list.push({
-        domain: domain,
-        targetAddress: dnsInfos[domain].target_address,
-        tokenId: dnsInfos[domain].tokenId,
-      });
+      if (Object.prototype.hasOwnProperty.call(dnsInfos, domain)) {
+        list.push({
+          domain: domain,
+          targetAddress: dnsInfos[domain].target_address,
+          tokenId: dnsInfos[domain].tokenId,
+        });
+      }
     }
 
     setList(list);
