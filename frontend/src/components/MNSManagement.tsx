@@ -27,7 +27,7 @@ export function MNSManagement(props: MNSManagementProps) {
   useEffect(() => {
     if (!connectedAccount || !massaClient || listSpinning) return;
     getUserEntryList({ address: connectedAccount.address() });
-  }, [connectedAccount, massaClient, listSpinning, getUserEntryList]);
+  }, [connectedAccount, massaClient]);
   return (
     <div className={customClass}>
       {!connected ? (
