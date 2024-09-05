@@ -1,5 +1,6 @@
 import {
   Args,
+  CHAIN_ID,
   Client,
   EOperationStatus,
   ICallData,
@@ -10,10 +11,15 @@ import {
 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
-import { DEFAULT_OP_FEES, SC_ADDRESS } from '../const/sc';
+import {
+  DEFAULT_OP_FEES,
+  MAINNET_SC_ADDRESS,
+  BUILDNET_SC_ADDRESS,
+} from '../const/sc';
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
 import { ExplorerApiClient } from '../ExplorerApiClient';
+import { useAccountStore } from '../lib/connectMassaWallets/store';
 
 interface ToasterMessage {
   pending: string;
@@ -67,6 +73,18 @@ type callSmartContractOptions = {
 function minBigInt(a: bigint, b: bigint) {
   return a < b ? a : b;
 }
+
+function getScAddress(chainId: bigint | undefined) {
+  switch (chainId) {
+    case CHAIN_ID.BuildNet:
+      return BUILDNET_SC_ADDRESS;
+    case CHAIN_ID.MainNet:
+      return MAINNET_SC_ADDRESS;
+    default:
+      throw new Error('SC_ADDRESS not found for chainId : ' + chainId);
+  }
+}
+
 export function useWriteMNS(client?: Client) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -75,10 +93,13 @@ export function useWriteMNS(client?: Client) {
   const [list, setList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
   const explorerApi = new ExplorerApiClient();
+  const { chainId } = useAccountStore();
 
   async function getAllocCost(
     params: DnsAllocParams,
   ): Promise<DnsGetAllocCostResponse> {
+    const SC_ADDRESS = getScAddress(chainId);
+
     let price = 0n;
     try {
       let args = new Args();
@@ -181,6 +202,8 @@ export function useWriteMNS(client?: Client) {
     setIsPending(false);
     let operationId: string | undefined;
     let toastId: string | undefined;
+
+    const SC_ADDRESS = getScAddress(chainId);
 
     const callData = {
       targetAddress: SC_ADDRESS,
@@ -314,6 +337,8 @@ export function useWriteMNS(client?: Client) {
     params: DnsUserEntryListParams,
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
+    const SC_ADDRESS = getScAddress(chainId);
+
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
       targetFunction: 'balanceOf',

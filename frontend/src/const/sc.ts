@@ -1,6 +1,8 @@
 import { fromMAS } from '@massalabs/massa-web3';
 
-export const SC_ADDRESS = import.meta.env.VITE_SC_ADDRESS;
+export const MAINNET_SC_ADDRESS = import.meta.env.VITE_MAINNET_SC_ADDRESS;
+export const BUILDNET_SC_ADDRESS = import.meta.env.VITE_BUILDNET_SC_ADDRESS;
+
 export const VESTING_SESSION_STORAGE_COST = fromMAS(2);
 let defaultOpFees: bigint;
 try {
