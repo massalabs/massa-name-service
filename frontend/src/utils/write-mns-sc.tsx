@@ -338,7 +338,6 @@ export function useWriteMNS(client?: Client) {
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
     const SC_ADDRESS = getScAddress(chainId);
-    console.log('SC_ADDRESS', SC_ADDRESS);
 
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
