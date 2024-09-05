@@ -14,7 +14,11 @@ import {
 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
 import { useState } from 'react';
-import { DEFAULT_OP_FEES, MAINNET_SC_ADDRESS, BUILDNET_SC_ADDRESS } from '../const/sc';
+import {
+  DEFAULT_OP_FEES,
+  MAINNET_SC_ADDRESS,
+  BUILDNET_SC_ADDRESS,
+} from '../const/sc';
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
 import { stringToBytes } from 'viem';
@@ -336,7 +340,6 @@ export function useWriteMNS(client?: Client) {
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
     const SC_ADDRESS = getScAddress(chainId);
-    console.log('SC_ADDRESS', SC_ADDRESS);
 
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
