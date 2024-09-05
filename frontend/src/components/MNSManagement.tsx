@@ -10,7 +10,8 @@ interface MNSManagementProps {
 
 export function MNSManagement(props: MNSManagementProps) {
   const { customClass } = props;
-  const { massaClient, connectedAccount, currentProvider } = useAccountStore();
+  const { massaClient, connectedAccount, currentProvider, chainId } =
+    useAccountStore();
   const {
     list,
     listSpinning,
@@ -25,9 +26,9 @@ export function MNSManagement(props: MNSManagementProps) {
   const connected = !!connectedAccount && !!currentProvider;
 
   useEffect(() => {
-    if (!connectedAccount || !massaClient || listSpinning) return;
+    if (!connectedAccount || !massaClient || listSpinning || !chainId) return;
     getUserEntryList({ address: connectedAccount.address() });
-  }, [connectedAccount, massaClient]);
+  }, [connectedAccount, massaClient, chainId]);
   return (
     <div className={customClass}>
       {!connected ? (

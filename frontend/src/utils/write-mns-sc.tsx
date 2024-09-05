@@ -80,7 +80,7 @@ function getScAddress(chainId: bigint | undefined) {
     case CHAIN_ID.MainNet:
       return MAINNET_SC_ADDRESS;
     default:
-      throw new Error('Environnement SC_ADDRESS not found');
+      throw new Error('SC_ADDRESS not found for chainId : ' + chainId);
   }
 }
 
@@ -336,6 +336,8 @@ export function useWriteMNS(client?: Client) {
   ): Promise<DnsUserEntryListResult[]> {
     setListSpinning(true);
     const SC_ADDRESS = getScAddress(chainId);
+    console.log('SC_ADDRESS', SC_ADDRESS);
+
     let resultBalance = await client?.smartContracts().readSmartContract({
       targetAddress: SC_ADDRESS,
       targetFunction: 'balanceOf',
