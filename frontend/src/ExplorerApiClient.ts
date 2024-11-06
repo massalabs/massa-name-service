@@ -31,7 +31,7 @@ export class ExplorerApiClient {
   async getDomainsInfo(domains: string[]): Promise<DomainInfo[]> {
     return new Promise((resolve, reject) => {
       axios
-        .get(this.url_api + '/dns/info', { params: { dns: domains } })
+        .post(this.url_api + '/dns/info', domains)
         .then((response) => {
           resolve(response.data);
         })
