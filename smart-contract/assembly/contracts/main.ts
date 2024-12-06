@@ -12,7 +12,6 @@ import {
 } from '@massalabs/massa-as-sdk';
 import {
   Args,
-  boolToByte,
   bytesToString,
   bytesToU256,
   stringToBytes,
@@ -20,27 +19,17 @@ import {
   u64ToBytes,
 } from '@massalabs/as-types';
 import {
-  _approve,
-  _balanceOf,
-  _constructor,
-  _getApproved,
-  _isApprovedForAll,
-  _name,
-  _ownerOf,
-  _setApprovalForAll,
-  _symbol,
   _update,
-  _transferFrom,
-} from '@massalabs/sc-standards/assembly/contracts/NFT/NFT-internals';
+  _constructor,
+  _ownerOf,
+} from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable-internals';
+
 import {
   _setOwner,
   _onlyOwner,
   _isOwner,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
-export {
-  setOwner,
-  ownerAddress,
-} from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
+
 import { u256 } from 'as-bignum/assembly';
 
 /**
@@ -445,37 +434,6 @@ export function getDomainFromTokenId(
   return Storage.get(buildDomainKey(tokenId));
 }
 
-// NFT RELATED FUNCTIONS
-
-/**
- * Get the name of the NFT collection
- * @returns name of the NFT collection
- */
-export function name(): StaticArray<u8> {
-  return stringToBytes(_name());
-}
-
-/**
- * Get the symbol of the NFT collection
- * @returns symbol of the NFT collection
- */
-export function symbol(): StaticArray<u8> {
-  return stringToBytes(_symbol());
-}
-
-/**
- * Returns the number of tokens owned by the address
- * @param binaryArgs - (address: string)
- * @returns Number of tokens owned by the address in u256 as bytes
- */
-export function balanceOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  const args = new Args(binaryArgs);
-  const address = args
-    .nextString()
-    .expect('address argument is missing or invalid');
-  return u256ToBytes(_balanceOf(address));
-}
-
 /**
  * Get the owner of the token
  * @param binaryArgs - (tokenId: u256)
@@ -493,74 +451,18 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   return stringToBytes(owner);
 }
 
-/**
- * Transfer token from one address to another
- * @param binaryArgs - (from: string, to: string, tokenId: u256)
- */
-export function transferFrom(binaryArgs: StaticArray<u8>): void {
-  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
-    throw new Error('Transfer is locked');
-  }
-  const args = new Args(binaryArgs);
-  const from = args.nextString().expect('from argument is missing or invalid');
-  const to = args.nextString().expect('to argument is missing or invalid');
-  const tokenId = args
-    .nextU256()
-    .expect('tokenId argument is missing or invalid');
-  _transferFrom(from, to, tokenId);
-}
+export {
+  setOwner,
+  ownerAddress,
+} from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 
-/**
- * Approve the address to transfer the token
- * @param binaryArgs - (to: string, tokenId: u256)
- */
-export function approve(binaryArgs: StaticArray<u8>): void {
-  const args = new Args(binaryArgs);
-  const to = args.nextString().expect('to argument is missing or invalid');
-  const tokenId = args
-    .nextU256()
-    .expect('tokenId argument is missing or invalid');
-  _approve(to, tokenId);
-}
-
-/**
- * Set approval for all tokens of the owner
- * @param binaryArgs - (to: string, approved: bool)
- */
-export function setApprovalForAll(binaryArgs: StaticArray<u8>): void {
-  const args = new Args(binaryArgs);
-  const to = args.nextString().expect('to argument is missing or invalid');
-  const approved = args
-    .nextBool()
-    .expect('approved argument is missing or invalid');
-  _setApprovalForAll(to, approved);
-}
-
-/**
- * Get the address approved to transfer the token or empty address if none
- * @param binaryArgs - (tokenId: u256)
- * @returns Address of the approved address
- */
-export function getApproved(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  const args = new Args(binaryArgs);
-  const tokenId = args
-    .nextU256()
-    .expect('tokenId argument is missing or invalid');
-  return stringToBytes(_getApproved(tokenId));
-}
-
-/**
- * Returns if the operator is approved to transfer the tokens of the owner
- * @param binaryArgs - (owner: string, operator: string)
- * @returns Bool as bytes
- */
-export function isApprovedForAll(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  const args = new Args(binaryArgs);
-  const owner = args
-    .nextString()
-    .expect('owner argument is missing or invalid');
-  const operator = args
-    .nextString()
-    .expect('operator argument is missing or invalid');
-  return boolToByte(_isApprovedForAll(owner, operator));
-}
+export {
+  isApprovedForAll,
+  setApprovalForAll,
+  getApproved,
+  approve,
+  transferFrom,
+  balanceOf,
+  symbol,
+  name,
+} from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable';
