@@ -2,6 +2,7 @@ import {
   Args,
   boolToByte,
   bytesToU256,
+  nativeTypeArrayToBytes,
   stringToBytes,
   u256ToBytes,
 } from '@massalabs/as-types';
@@ -37,8 +38,11 @@ import {
   mockBalance,
   mockTransferredCoins,
   resetStorage,
+  getKeys,
 } from '@massalabs/massa-as-sdk';
 import { u256 } from 'as-bignum/assembly';
+// eslint-disable-next-line max-len
+import { OWNED_TOKENS_KEY } from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable-internals';
 
 const defaultOwner = 'AU12UBnqTHDQALpocVBnkPNy7y5CndUJQTLutaVDDFgMJcq5kQiKq';
 const owner = 'AU122Em8qkqegdLb1eyH8rdkSCNEf7RZLeTJve4Q2inRPGiTJ2xNv';
@@ -76,7 +80,18 @@ describe('Test DNS allocation', () => {
     args.add(domain);
     args.add(target);
 
+    // check no tokens are owned by defaultOwner
+    let keys = getKeys(OWNED_TOKENS_KEY.concat(stringToBytes(defaultOwner)));
+    expect(keys.length).toStrictEqual(0);
+
     expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+
+    // check owned
+    const filter = OWNED_TOKENS_KEY.concat(stringToBytes(defaultOwner));
+    keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(1);
+    const tokenId = nativeTypeArrayToBytes(keys[0].slice(filter.length));
+    expect(tokenId).toStrictEqual(u256ToBytes(u256.Zero));
   });
   test('Testing multiple alloc', () => {
     let argsCost = new Args();
@@ -88,6 +103,14 @@ describe('Test DNS allocation', () => {
     args.add(domain);
     args.add(target);
     expect(dnsAlloc(args.serialize())).toStrictEqual(u256ToBytes(u256.Zero));
+
+    // check owned
+    let filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    let keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(1);
+    const tokenId1 = nativeTypeArrayToBytes(keys[0].slice(filter.length));
+    expect(tokenId1).toStrictEqual(u256ToBytes(u256.Zero));
+
     mockBalance(owner, transferredAmount);
     mockTransferredCoins(transferredAmount);
     mockBalance(scAddress, transferredAmount);
@@ -95,6 +118,13 @@ describe('Test DNS allocation', () => {
     args2.add('test29087890');
     args2.add(target);
     expect(dnsAlloc(args2.serialize())).toStrictEqual(u256ToBytes(u256.One));
+
+    // check owned
+    filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(2);
+    const tokenId2 = nativeTypeArrayToBytes(keys[1].slice(filter.length));
+    expect(tokenId2).toStrictEqual(u256ToBytes(u256.One));
   });
   throws('No funds sent', () => {
     let args = new Args();
@@ -200,6 +230,11 @@ describe('Test DNS free', () => {
     mockTransferredCoins(0);
     mockBalance(scAddress, transferredAmount / 2);
     dnsFree(argsFree.serialize());
+
+    // check owned
+    let filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    let keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(0);
   });
   test('Alloc again after free', () => {
     let args = new Args();
@@ -221,6 +256,13 @@ describe('Test DNS free', () => {
     mockTransferredCoins(transferredAmount);
     mockBalance(scAddress, transferredAmount);
     dnsAlloc(args2.serialize());
+
+    // check owned
+    let filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    let keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(1);
+    const tokenId1 = nativeTypeArrayToBytes(keys[0].slice(filter.length));
+    expect(tokenId1).toStrictEqual(u256ToBytes(u256.One));
   });
   throws('Domain not found', () => {
     let args = new Args();
@@ -673,17 +715,34 @@ describe('Test NFT transferFrom', () => {
     switchUser(owner);
   });
   test('Test NFT transferFrom success', () => {
+    // check owned
+    let filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    let keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(1);
+    let tokenId = bytesToU256(
+      nativeTypeArrayToBytes(keys[0].slice(filter.length)),
+    );
+    expect(tokenId).toStrictEqual(u256.Zero);
+
     let argsTransfer = new Args();
     argsTransfer.add(owner);
     argsTransfer.add(target);
-    let tokenId = bytesToU256(
-      getTokenIdFromDomain(new Args().add(domain).serialize()),
-    );
     argsTransfer.add(tokenId);
     transferFrom(argsTransfer.serialize());
     let argsOwner = new Args();
     argsOwner.add(tokenId);
     expect(ownerOf(argsOwner.serialize())).toStrictEqual(stringToBytes(target));
+
+    // check sender owned
+    filter = OWNED_TOKENS_KEY.concat(stringToBytes(owner));
+    keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(0);
+    // check recipient owned
+    filter = OWNED_TOKENS_KEY.concat(stringToBytes(target));
+    keys = getKeys(filter);
+    expect(keys.length).toStrictEqual(1);
+    tokenId = bytesToU256(nativeTypeArrayToBytes(keys[0].slice(filter.length)));
+    expect(tokenId).toStrictEqual(u256.Zero);
   });
   throws('Caller is not the owner', () => {
     let argsTransfer = new Args();
