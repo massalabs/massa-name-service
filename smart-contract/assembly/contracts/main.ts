@@ -1,12 +1,8 @@
-// The entry file of your WebAssembly module.
 import {
   Address,
   Context,
   Storage,
   balance,
-  call,
-  functionExists,
-  isDeployingContract,
   setBytecode,
   transferCoins,
 } from '@massalabs/massa-as-sdk';
@@ -20,32 +16,25 @@ import {
 } from '@massalabs/as-types';
 import {
   _update,
-  _constructor,
   _ownerOf,
+  TOTAL_SUPPLY_KEY,
 } from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable-internals';
-
 import {
-  _setOwner,
+  transferFrom as _transferFrom,
+  mrc721Constructor,
+} from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable';
+import {
   _onlyOwner,
   _isOwner,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
 
 import { u256 } from 'as-bignum/assembly';
 
-/**
- * This function is meant to be called only one time: when the contract is deployed.
- *
- * @param _binaryArgs - Arguments serialized with Args (none)
- */
-export function constructor(_binaryArgs: StaticArray<u8>): void {
-  // This line is important. It ensures that this function can't be called in the future.
-  // If you remove this check, someone could call your constructor function and reset your smart contract.
-  assert(isDeployingContract());
-  _constructor('MassaNameService', 'MNS');
+export function constructor(_: StaticArray<u8>): void {
+  mrc721Constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
-  _setOwner(Context.caller().toString());
   Storage.set(buildLockedKey(), u256ToBytes(u256.Zero));
-  return;
+  Storage.set(TOTAL_SUPPLY_KEY, u256ToBytes(u256.Zero));
 }
 
 // DNS RELATED FUNCTIONS
@@ -138,11 +127,6 @@ function buildLockedKey(): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(LOCKED_KEY_PREFIX);
 }
 
-function addressIsEOA(address: Address): bool {
-  const stringAddress = address.toString();
-  return stringAddress.startsWith('AU');
-}
-
 /**
  * Lock the contract
  */
@@ -230,13 +214,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   );
   if (transferredCoins > totalCost) {
     const amountToSend = transferredCoins - totalCost;
-    if (addressIsEOA(Context.caller())) {
-      transferCoins(Context.caller(), amountToSend);
-    } else {
-      if (functionExists(Context.caller(), 'receiveCoins')) {
-        call(Context.caller(), 'receiveCoins', new Args(), amountToSend);
-      }
-    }
+    transferCoins(Context.caller(), amountToSend);
   }
   return u256ToBytes(counter);
 }
@@ -290,14 +268,7 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
     calculateCreationCost(domain.length) / 2 +
     storageCostsRefunded +
     Context.transferredCoins();
-  if (addressIsEOA(Context.caller())) {
-    transferCoins(Context.caller(), refundTotal);
-  } else {
-    if (functionExists(Context.caller(), 'receiveCoins')) {
-      call(Context.caller(), 'receiveCoins', new Args(), refundTotal);
-    }
-  }
-  return;
+  transferCoins(Context.caller(), refundTotal);
 }
 
 /**
@@ -451,6 +422,11 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   return stringToBytes(owner);
 }
 
+export function transferFrom(binaryArgs: StaticArray<u8>): void {
+  assert(!Storage.has(buildLockedKey()), 'Contract is locked');
+  _transferFrom(binaryArgs);
+}
+
 export {
   setOwner,
   ownerAddress,
@@ -461,8 +437,8 @@ export {
   setApprovalForAll,
   getApproved,
   approve,
-  transferFrom,
   balanceOf,
   symbol,
   name,
+  totalSupply,
 } from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable';
