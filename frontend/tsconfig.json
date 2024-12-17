@@ -19,5 +19,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
+  "exclude": ["src/proto-gen"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

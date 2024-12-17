@@ -13,7 +13,7 @@ export function MNSManagement(props: MNSManagementProps) {
   const { massaClient, connectedAccount, currentProvider, chainId } =
     useAccountStore();
   const {
-    list,
+    domainsList,
     listSpinning,
     getUserEntryList,
     dnsAlloc,
@@ -28,7 +28,7 @@ export function MNSManagement(props: MNSManagementProps) {
   useEffect(() => {
     if (!connectedAccount || !massaClient || listSpinning || !chainId) return;
     getUserEntryList({ address: connectedAccount.address() });
-  }, [connectedAccount, massaClient, chainId]);
+  }, [connectedAccount, massaClient, chainId, listSpinning, getUserEntryList]);
   return (
     <div className={customClass}>
       {!connected ? (
@@ -44,7 +44,7 @@ export function MNSManagement(props: MNSManagementProps) {
             deleteDnsEntry={deleteDnsEntry}
             changeTargetAddressDnsEntry={changeTargetAddressDnsEntry}
             changeOwnershipDnsEntry={changeOwnershipDnsEntry}
-            list={list}
+            list={domainsList}
             listSpinning={listSpinning}
           />
         </div>
