@@ -22,7 +22,7 @@ import {
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
-import { isEqual } from 'lodash';
+import useGRPC from './useGRPC';
 
 interface ToasterMessage {
   pending: string;
@@ -77,7 +77,7 @@ function minBigInt(a: bigint, b: bigint) {
   return a < b ? a : b;
 }
 
-function getScAddress(chainId: bigint | undefined) {
+export function getScAddress(chainId: bigint | undefined) {
   switch (chainId) {
     case CHAIN_ID.BuildNet:
       return BUILDNET_SC_ADDRESS;
@@ -93,9 +93,11 @@ export function useWriteMNS(client?: Client) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
   const [opId, setOpId] = useState<string | undefined>(undefined);
-  const [list, setList] = useState<DnsUserEntryListResult[]>([]);
+  const [domainsList, setDomainsList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
   const { chainId } = useAccountStore();
+
+  const { datastoreKeysCandidate } = useGRPC();
 
   async function getAllocCost(
     params: DnsAllocParams,
@@ -349,21 +351,18 @@ export function useWriteMNS(client?: Client) {
     if (!resultBalance) {
       toast.error('Failed to get user entry list', { duration: 5000 });
       setListSpinning(false);
+      setDomainsList([]);
       return [];
     }
 
-    let list: DnsUserEntryListResult[] = [];
-
-    const addressInfo = await client?.publicApi().getAddresses([SC_ADDRESS]);
-    const filter = [
+    const filter = Uint8Array.from([
       ...strToBytes('ownedTokens'),
       ...strToBytes(params.address),
-    ];
-    const ownedKeys = addressInfo?.[0].candidate_datastore_keys.filter(
-      (key) => {
-        return isEqual(key.slice(0, filter.length), filter);
-      },
-    );
+    ]);
+
+    let list: DnsUserEntryListResult[] = [];
+
+    const ownedKeys = await datastoreKeysCandidate(SC_ADDRESS, filter);
 
     if (ownedKeys) {
       const tokenIdsBytes = ownedKeys.map((key) => key.slice(filter.length));
@@ -420,7 +419,7 @@ export function useWriteMNS(client?: Client) {
         tokenId: tokenIds[index],
       }));
     }
-    setList(list);
+    setDomainsList(list);
     setListSpinning(false);
     return list;
   }
@@ -478,7 +477,7 @@ export function useWriteMNS(client?: Client) {
     isPending,
     isSuccess,
     isError,
-    list,
+    domainsList,
     listSpinning,
     dnsAlloc,
     getAllocCost,

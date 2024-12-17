@@ -5,4 +5,5 @@ module.exports = {
     'no-console': 'off',
     'max-len': ['error', { ignoreStrings: true, code: 120 }],
   },
+  ignorePatterns: ['src/proto-gen/*'],
 };
