@@ -1,16 +1,9 @@
-import {
-  Account,
-  Args,
-  Mas,
-  SmartContract,
-  Web3Provider,
-} from '@massalabs/massa-web3';
-import { getScByteCode } from './utils';
-import { config } from 'dotenv';
-config();
+import { Args, Mas, SmartContract } from '@massalabs/massa-web3';
+import { getScByteCode, initProvider } from './utils';
 
-const account = await Account.fromEnv();
-const provider = Web3Provider.buildnet(account);
+let events;
+
+const provider = await initProvider();
 
 console.log('Deploying contract...');
 
@@ -23,12 +16,12 @@ const contract = await SmartContract.deploy(
   provider,
   byteCode,
   constructorArgs,
-  { coins: Mas.fromString('0.1'), waitFinalExecution: false },
+  { coins: Mas.fromString('10'), waitFinalExecution: true },
 );
 
 console.log('Contract deployed at:', contract.address);
 
-const events = await provider.getEvents({
+events = await provider.getEvents({
   smartContractAddress: contract.address,
 });
 
