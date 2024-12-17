@@ -4,9 +4,12 @@ import {
   Client,
   EOperationStatus,
   ICallData,
+  IDatastoreEntryInput,
   MAX_GAS_CALL,
   bytesToStr,
+  bytesToU256,
   bytesToU64,
+  strToBytes,
   toMAS,
 } from '@massalabs/massa-web3';
 import { ToastContent, toast } from '@massalabs/react-ui-kit';
@@ -18,8 +21,8 @@ import {
 } from '../const/sc';
 import { OperationToast } from '../lib/connectMassaWallets/components/OperationToast';
 import { logSmartContractEvents } from '../lib/connectMassaWallets/utils';
-import { ExplorerApiClient } from '../ExplorerApiClient';
 import { useAccountStore } from '../lib/connectMassaWallets/store';
+import { isEqual } from 'lodash';
 
 interface ToasterMessage {
   pending: string;
@@ -92,7 +95,6 @@ export function useWriteMNS(client?: Client) {
   const [opId, setOpId] = useState<string | undefined>(undefined);
   const [list, setList] = useState<DnsUserEntryListResult[]>([]);
   const [listSpinning, setListSpinning] = useState(false);
-  const explorerApi = new ExplorerApiClient();
   const { chainId } = useAccountStore();
 
   async function getAllocCost(
@@ -352,19 +354,71 @@ export function useWriteMNS(client?: Client) {
 
     let list: DnsUserEntryListResult[] = [];
 
-    let domains = await explorerApi.getDomainOwnedByAddress(params.address);
-    if (domains && domains.length > 0) {
-      let dnsInfos = await explorerApi.getDomainsInfo(domains);
+    const addressInfo = await client?.publicApi().getAddresses([SC_ADDRESS]);
+    const filter = [
+      ...strToBytes('ownedTokens'),
+      ...strToBytes(params.address),
+    ];
+    const ownedKeys = addressInfo?.[0].candidate_datastore_keys.filter(
+      (key) => {
+        return isEqual(key.slice(0, filter.length), filter);
+      },
+    );
 
-      for (const domain in dnsInfos) {
-        if (Object.prototype.hasOwnProperty.call(dnsInfos, domain)) {
-          list.push({
-            domain: domain,
-            targetAddress: dnsInfos[domain].target_address,
-            tokenId: dnsInfos[domain].tokenId,
-          });
-        }
+    if (ownedKeys) {
+      const tokenIdsBytes = ownedKeys.map((key) => key.slice(filter.length));
+      const tokenIds = tokenIdsBytes.map((val) =>
+        bytesToU256(Uint8Array.from(val)),
+      );
+
+      const DOMAIN_SEPARATOR_KEY = [0x42];
+      const DOMAIN_KEY_PREFIX = [0x3];
+      const TARGET_KEY_PREFIX = [0x02];
+
+      const domainsDataStoreEntries: IDatastoreEntryInput[] = tokenIdsBytes.map(
+        (tokenIdBytes) => ({
+          address: SC_ADDRESS,
+          key: Uint8Array.from([
+            ...DOMAIN_SEPARATOR_KEY,
+            ...DOMAIN_KEY_PREFIX,
+            ...tokenIdBytes,
+          ]),
+        }),
+      );
+
+      const domainsRes = await client!
+        .publicApi()
+        .getDatastoreEntries(domainsDataStoreEntries);
+      const domains = domainsRes.map((val) => bytesToStr(val.candidate_value!));
+
+      const targetDataStoreEntries: IDatastoreEntryInput[] = domains.map(
+        (domain) => ({
+          address: SC_ADDRESS,
+          key: Uint8Array.from([
+            ...DOMAIN_SEPARATOR_KEY,
+            ...TARGET_KEY_PREFIX,
+            ...strToBytes(domain),
+          ]),
+        }),
+      );
+      const targetsRes = await client!
+        .publicApi()
+        .getDatastoreEntries(targetDataStoreEntries);
+      const targets = targetsRes.map((val) => bytesToStr(val.candidate_value!));
+
+      if (
+        targets.length !== domains.length ||
+        domains.length !== tokenIds.length ||
+        tokenIds.length !== targets.length
+      ) {
+        console.error('Inconsistent data for owned MNS');
       }
+
+      list = domains.map((domain, index) => ({
+        domain,
+        targetAddress: targets[index],
+        tokenId: tokenIds[index],
+      }));
     }
 
     setList(list);
