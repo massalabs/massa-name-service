@@ -3,6 +3,7 @@ import {
   Context,
   Storage,
   balance,
+  getKeys,
   setBytecode,
   transferCoins,
 } from '@massalabs/massa-as-sdk';
@@ -33,7 +34,7 @@ import { u256 } from 'as-bignum/assembly';
 export function constructor(_: StaticArray<u8>): void {
   mrc721Constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
-  Storage.set(buildLockedKey(), u256ToBytes(u256.Zero));
+  Storage.set(lockedKey(), u256ToBytes(u256.Zero));
   Storage.set(TOTAL_SUPPLY_KEY, u256ToBytes(u256.Zero));
 }
 
@@ -99,31 +100,35 @@ export function isValidDomain(domain: string): bool {
   return true;
 }
 
-function buildTokenIdKey(domain: string): StaticArray<u8> {
+function domainToTokenIdKey(domain: string): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(
     TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain)),
   );
 }
 
-function buildDomainKey(tokenId: u256): StaticArray<u8> {
+function tokenIdToDomainKey(tokenId: u256): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(
     DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId)),
   );
 }
 
-function buildTargetKey(domain: string): StaticArray<u8> {
+function domainToTargetKey(domain: string): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(
     TARGET_KEY_PREFIX.concat(stringToBytes(domain)),
   );
 }
 
-function buildAddressKey(address: string): StaticArray<u8> {
+function targetToDomainKeyPrefix(address: string): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(
     ADDRESS_KEY_PREFIX.concat(stringToBytes(address)),
   );
 }
 
-function buildLockedKey(): StaticArray<u8> {
+function targetToDomainKey(address: string, domain:string): StaticArray<u8> {
+  return targetToDomainKeyPrefix(address).concat(stringToBytes(domain));
+}
+
+function lockedKey(): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(LOCKED_KEY_PREFIX);
 }
 
@@ -132,7 +137,7 @@ function buildLockedKey(): StaticArray<u8> {
  */
 export function dnsLock(_: StaticArray<u8>): void {
   _onlyOwner();
-  Storage.set(buildLockedKey(), u256ToBytes(u256.Zero));
+  Storage.set(lockedKey(), u256ToBytes(u256.Zero));
 }
 
 /**
@@ -140,7 +145,7 @@ export function dnsLock(_: StaticArray<u8>): void {
  */
 export function dnsUnlock(_: StaticArray<u8>): void {
   _onlyOwner();
-  Storage.del(buildLockedKey());
+  Storage.del(lockedKey());
 }
 
 /**
@@ -159,62 +164,48 @@ export function dnsAllocCost(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 }
 
 /**
- * Register domain
+ * Register a domain
  * @param binaryArgs - (domain: string, target: string)
  * @returns tokenId of the dns as u256
  */
 export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
-  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+  if (Storage.has(lockedKey()) && !_isOwner(Context.caller().toString())) {
     throw new Error('Domain allocation is locked');
   }
+
   const initialBalance = balance();
   const args = new Args(binaryArgs);
-  const domain = args
-    .nextString()
-    .expect('domain argument is missing or invalid');
-  const target = args
-    .nextString()
-    .expect('target argument is missing or invalid');
+
+  const domain = args.nextString().expect('Domain argument is missing or invalid');
+  const target = args.nextString().expect('Target argument is missing or invalid');
   const owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
-  const targetKey = buildTargetKey(domain);
-  assert(!Storage.has(targetKey), 'Domain already registered');
-  Storage.set(targetKey, stringToBytes(target));
-
-  assert(Storage.has(COUNTER_KEY), 'Counter not initialized');
+  assert(!Storage.has(domainToTargetKey(domain)), 'Domain already registered');
+  
   const counter = bytesToU256(Storage.get(COUNTER_KEY));
-  // Transfer ownership of the domain to the caller
-  _update(owner, counter, '');
-
-  Storage.set(buildDomainKey(counter), stringToBytes(domain));
-  Storage.set(buildTokenIdKey(domain), u256ToBytes(counter));
-
-  let entries: string[] = [];
-  const addressKey = buildAddressKey(target);
-  if (Storage.has(addressKey)) {
-    entries = bytesToString(Storage.get(addressKey)).split(',');
-  }
-  entries.push(domain);
-  Storage.set(addressKey, stringToBytes(entries.join(',')));
-
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
-  const finalBalance = balance();
-  const storageCosts = initialBalance - finalBalance;
+  
+  // Mint the token
+  _update(owner, counter, '');
+  
+  // Store the domain and token ID
+  Storage.set(domainToTargetKey(domain), stringToBytes(target));
+  Storage.set(targetToDomainKey(target, domain), []);
+  Storage.set(tokenIdToDomainKey(counter), stringToBytes(domain));
+  Storage.set(domainToTokenIdKey(domain), u256ToBytes(counter));
+
+  const storageCosts = initialBalance - balance();
   const totalCost = calculateCreationCost(domain.length) + storageCosts;
   const transferredCoins = Context.transferredCoins();
+
   assert(
     transferredCoins >= totalCost,
-    'Insufficient funds to register domain. Provided:' +
-      transferredCoins.toString() +
-      '. Needed: ' +
-      totalCost.toString() +
-      '.',
+    `Insufficient funds to register domain. Provided: ${transferredCoins.toString()}, Needed: ${totalCost.toString()}.`
   );
   if (transferredCoins > totalCost) {
-    const amountToSend = transferredCoins - totalCost;
-    transferCoins(Context.caller(), amountToSend);
+    transferCoins(Context.caller(), transferredCoins - totalCost);
   }
   return u256ToBytes(counter);
 }
@@ -225,49 +216,47 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
  * @returns void
  */
 export function dnsFree(binaryArgs: StaticArray<u8>): void {
-  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+  if (Storage.has(lockedKey()) && !_isOwner(Context.caller().toString())) {
     throw new Error('Free is locked');
   }
+
   const initialBalance = balance();
   const args = new Args(binaryArgs);
   const tokenId = args
     .nextU256()
     .expect('tokenId argument is missing or invalid');
 
-  const domainKey = buildDomainKey(tokenId);
-  assert(Storage.has(domainKey), 'Domain not registered');
-  const owner = _ownerOf(tokenId);
-  assert(new Address(owner) == Context.caller(), 'Only owner can free domain');
+  assert(
+    new Address(_ownerOf(tokenId)) == Context.caller(),
+    'Only owner can free domain'
+  );
 
-  const domain = bytesToString(Storage.get(domainKey));
-  Storage.del(domainKey);
-  // Transfer ownership of the domain to empty address
+  // Burn the token
   _update('', tokenId, '');
 
-  let targetKey = buildTargetKey(domain);
-  let target = bytesToString(Storage.get(targetKey));
-  let addressDomains = bytesToString(
-    Storage.get(buildAddressKey(target)),
-  ).split(',');
-  const index = addressDomains.indexOf(domain);
-  addressDomains.splice(index, 1);
-  if (addressDomains.length == 0) {
-    Storage.del(buildAddressKey(target));
-  } else {
-    Storage.set(
-      buildAddressKey(target),
-      stringToBytes(addressDomains.join(',')),
-    );
-  }
+  // Retrieve the domain
+  const idToDomainKey = tokenIdToDomainKey(tokenId);
+  assert(Storage.has(idToDomainKey), 'Domain not registered');
+  const domain = bytesToString(Storage.get(idToDomainKey));
 
-  Storage.del(targetKey);
-  Storage.del(buildTokenIdKey(domain));
+  // Retrieve and delete the target
+  const domainToTargetK = domainToTargetKey(domain);
+  const target = bytesToString(Storage.get(domainToTargetK));
+  
+  // Delete all associated keys
+  Storage.del(domainToTargetK);
+  Storage.del(targetToDomainKey(target, domain));
+  Storage.del(idToDomainKey);
+  Storage.del(domainToTokenIdKey(domain));
+
   const finalBalance = balance();
   const storageCostsRefunded = finalBalance - initialBalance;
+
   const refundTotal =
     calculateCreationCost(domain.length) / 2 +
     storageCostsRefunded +
     Context.transferredCoins();
+
   transferCoins(Context.caller(), refundTotal);
 }
 
@@ -281,8 +270,8 @@ export function dnsResolve(args: StaticArray<u8>): StaticArray<u8> {
   const domain = argsObj
     .nextString()
     .expect('domain argument is missing or invalid');
-  const target = Storage.get(buildTargetKey(domain));
-  return target;
+
+  return Storage.get(domainToTargetKey(domain));
 }
 
 /** Get a list of domain associated with an address
@@ -295,7 +284,24 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
   const address = argsObj
     .nextString()
     .expect('address argument is missing or invalid');
-  return Storage.get(buildAddressKey(address));
+
+  const prefix = targetToDomainKeyPrefix(address);
+  const keys = getKeys(prefix);
+
+  assert(keys.length > 0, 'No domain found for the address');
+
+  let domains = new StaticArray<u8>(0);
+
+  for (let i = 0; i < keys.length; i++) {
+    const domain: StaticArray<u8> = StaticArray.fromArray(keys[i].slice(prefix.length));    
+    domains = domains.concat(domain);
+    
+    if (i < keys.length - 1) {
+      domains = domains.concat(stringToBytes(','));
+    }
+  }
+
+  return domains;
 }
 
 /**
@@ -303,48 +309,35 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
  * @param binaryArgs - (domain: string, newTarget: string)
  */
 export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
-  if (Storage.has(buildLockedKey()) && !_isOwner(Context.caller().toString())) {
+  if (Storage.has(lockedKey()) && !_isOwner(Context.caller().toString())) {
     throw new Error('Update Target is locked');
   }
-  const argsObj = new Args(binaryArgs);
-  const domain = argsObj
+
+  const args = new Args(binaryArgs);
+
+  const domain = args
     .nextString()
     .expect('domain argument is missing or invalid');
-  const newTarget = argsObj
+
+  const newTarget = args
     .nextString()
     .expect('target argument is missing or invalid');
 
-  const tokenId = bytesToU256(Storage.get(buildTokenIdKey(domain)));
+  const tokenId = bytesToU256(Storage.get(domainToTokenIdKey(domain)));
   const owner = _ownerOf(tokenId);
+
   assert(
     new Address(owner) == Context.caller(),
     'Only owner can update target',
   );
 
-  const previousTarget = bytesToString(Storage.get(buildTargetKey(domain)));
-  const addressDomains = bytesToString(
-    Storage.get(buildAddressKey(previousTarget)),
-  ).split(',');
-  const index = addressDomains.indexOf(domain);
-  addressDomains.splice(index, 1);
-  if (addressDomains.length == 0) {
-    Storage.del(buildAddressKey(previousTarget));
-  } else {
-    Storage.set(
-      buildAddressKey(previousTarget),
-      stringToBytes(addressDomains.join(',')),
-    );
-  }
-
-  let entries: string[] = [];
-  const addressKey = buildAddressKey(newTarget);
-  if (Storage.has(addressKey)) {
-    entries = bytesToString(Storage.get(addressKey)).split(',');
-  }
-  entries.push(domain);
-  Storage.set(addressKey, stringToBytes(entries.join(',')));
-
-  Storage.set(buildTargetKey(domain), stringToBytes(newTarget));
+  // remove the old target
+  const oldTarget = bytesToString(Storage.get(domainToTargetKey(domain)));
+  Storage.del(targetToDomainKey(oldTarget, domain));
+  // Add the domain to the new target
+  Storage.set(targetToDomainKey(newTarget, domain), []);
+  // Update the target for the domain
+  Storage.set(domainToTargetKey(domain), stringToBytes(newTarget));
 }
 
 /**
@@ -384,10 +377,10 @@ export function getTokenIdFromDomain(
   const domain = args
     .nextString()
     .expect('domain argument is missing or invalid');
-  if (!Storage.has(buildTokenIdKey(domain))) {
+  if (!Storage.has(domainToTokenIdKey(domain))) {
     throw new Error('Domain not found');
   }
-  return Storage.get(buildTokenIdKey(domain));
+  return Storage.get(domainToTokenIdKey(domain));
 }
 
 /**
@@ -402,7 +395,7 @@ export function getDomainFromTokenId(
   const tokenId = args
     .nextU256()
     .expect('tokenId argument is missing or invalid');
-  return Storage.get(buildDomainKey(tokenId));
+  return Storage.get(tokenIdToDomainKey(tokenId));
 }
 
 /**
@@ -423,7 +416,7 @@ export function ownerOf(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 }
 
 export function transferFrom(binaryArgs: StaticArray<u8>): void {
-  assert(!Storage.has(buildLockedKey()), 'Contract is locked');
+  assert(!Storage.has(lockedKey()), 'Contract is locked');
   _transferFrom(binaryArgs);
 }
 
