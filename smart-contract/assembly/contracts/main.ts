@@ -178,10 +178,10 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
   const domain = args
     .nextString()
-    .expect('Domain argument is missing or invalid');
+    .expect('domain argument is missing or invalid');
   const target = args
     .nextString()
-    .expect('Target argument is missing or invalid');
+    .expect('target argument is missing or invalid');
   const owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
