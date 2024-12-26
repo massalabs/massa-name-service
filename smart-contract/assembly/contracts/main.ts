@@ -124,7 +124,7 @@ function targetToDomainKeyPrefix(address: string): StaticArray<u8> {
   );
 }
 
-function targetToDomainKey(address: string, domain:string): StaticArray<u8> {
+function targetToDomainKey(address: string, domain: string): StaticArray<u8> {
   return targetToDomainKeyPrefix(address).concat(stringToBytes(domain));
 }
 
@@ -176,20 +176,24 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const initialBalance = balance();
   const args = new Args(binaryArgs);
 
-  const domain = args.nextString().expect('Domain argument is missing or invalid');
-  const target = args.nextString().expect('Target argument is missing or invalid');
+  const domain = args
+    .nextString()
+    .expect('Domain argument is missing or invalid');
+  const target = args
+    .nextString()
+    .expect('Target argument is missing or invalid');
   const owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
   assert(!Storage.has(domainToTargetKey(domain)), 'Domain already registered');
-  
+
   const counter = bytesToU256(Storage.get(COUNTER_KEY));
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
-  
+
   // Mint the token
   _update(owner, counter, '');
-  
+
   // Store the domain and token ID
   Storage.set(domainToTargetKey(domain), stringToBytes(target));
   Storage.set(targetToDomainKey(target, domain), []);
@@ -202,7 +206,7 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
   assert(
     transferredCoins >= totalCost,
-    `Insufficient funds to register domain. Provided: ${transferredCoins.toString()}, Needed: ${totalCost.toString()}.`
+    `Insufficient funds to register domain. Provided: ${transferredCoins.toString()}, Needed: ${totalCost.toString()}.`,
   );
   if (transferredCoins > totalCost) {
     transferCoins(Context.caller(), transferredCoins - totalCost);
@@ -228,7 +232,7 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
 
   assert(
     new Address(_ownerOf(tokenId)) == Context.caller(),
-    'Only owner can free domain'
+    'Only owner can free domain',
   );
 
   // Burn the token
@@ -242,7 +246,7 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   // Retrieve and delete the target
   const domainToTargetK = domainToTargetKey(domain);
   const target = bytesToString(Storage.get(domainToTargetK));
-  
+
   // Delete all associated keys
   Storage.del(domainToTargetK);
   Storage.del(targetToDomainKey(target, domain));
@@ -293,9 +297,11 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
   let domains = new StaticArray<u8>(0);
 
   for (let i = 0; i < keys.length; i++) {
-    const domain: StaticArray<u8> = StaticArray.fromArray(keys[i].slice(prefix.length));    
+    const domain: StaticArray<u8> = StaticArray.fromArray(
+      keys[i].slice(prefix.length),
+    );
     domains = domains.concat(domain);
-    
+
     if (i < keys.length - 1) {
       domains = domains.concat(stringToBytes(','));
     }
