@@ -188,8 +188,6 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   assert(!Storage.has(domainToTargetKey(domain)), 'Domain already registered');
 
   const counter = bytesToU256(Storage.get(COUNTER_KEY));
-  // @ts-ignore (fix for IDE)
-  Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
 
   // Mint the token
   _update(owner, counter, '');
@@ -199,6 +197,8 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   Storage.set(targetToDomainKey(target, domain), []);
   Storage.set(tokenIdToDomainKey(counter), stringToBytes(domain));
   Storage.set(domainToTokenIdKey(domain), u256ToBytes(counter));
+  // @ts-ignore (fix for IDE)
+  Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
 
   const storageCosts = initialBalance - balance();
   const totalCost = calculateCreationCost(domain.length) + storageCosts;
