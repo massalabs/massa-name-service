@@ -31,7 +31,6 @@ import {
 
 import { u256 } from 'as-bignum/assembly';
 
-const COMMA_BYTE = [44];
 
 export function constructor(_: StaticArray<u8>): void {
   mrc721Constructor('MassaNameService', 'MNS');
@@ -281,32 +280,35 @@ export function dnsResolve(args: StaticArray<u8>): StaticArray<u8> {
 }
 
 /** Get a list of domain associated with an address
- * @param args - (address: string)
+ * @param args - (targetAddress: string)
  *
  * @returns List of domains as string separated by comma
  */
 export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
   const argsObj = new Args(args);
-  const address = argsObj
+  const targetAddress = argsObj
     .nextString()
     .expect('address argument is missing or invalid');
 
-  const prefix = targetToDomainKeyPrefix(address);
+  const prefix = targetToDomainKeyPrefix(targetAddress);
   const keys = getKeys(prefix);
+
   assert(keys.length > 0, 'No domain found for the address');
-  
+
   const prefixLength = prefix.length;
-  let domains = new StaticArray<u8>(0);
+  let domains: u8[] = [];
 
   for (let i = 0; i < keys.length; i++) {
-    domains = domains.concat(keys[i].slice(prefixLength));
+    const domain = keys[i].slice(prefixLength);
+
+    domains = domains.concat(domain);
 
     if (i < keys.length - 1) {
-      domains = domains.concat(COMMA_BYTE);
+      domains.push(44/* coma */);
     }
   }
 
-  return domains;
+  return StaticArray.fromArray(domains);
 }
 
 /**
