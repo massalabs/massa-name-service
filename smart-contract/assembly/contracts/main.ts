@@ -31,7 +31,6 @@ import {
 
 import { u256 } from 'as-bignum/assembly';
 
-
 export function constructor(_: StaticArray<u8>): void {
   mrc721Constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
@@ -304,7 +303,7 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
     domains = domains.concat(domain);
 
     if (i < keys.length - 1) {
-      domains.push(44/* coma */);
+      domains.push(44 /* coma */);
     }
   }
 
