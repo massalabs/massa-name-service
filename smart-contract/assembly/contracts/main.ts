@@ -31,6 +31,8 @@ import {
 
 import { u256 } from 'as-bignum/assembly';
 
+const COMMA_BYTE = [44];
+
 export function constructor(_: StaticArray<u8>): void {
   mrc721Constructor('MassaNameService', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
@@ -291,19 +293,16 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
 
   const prefix = targetToDomainKeyPrefix(address);
   const keys = getKeys(prefix);
-
   assert(keys.length > 0, 'No domain found for the address');
-
+  
+  const prefixLength = prefix.length;
   let domains = new StaticArray<u8>(0);
 
   for (let i = 0; i < keys.length; i++) {
-    const domain: StaticArray<u8> = StaticArray.fromArray(
-      keys[i].slice(prefix.length),
-    );
-    domains = domains.concat(domain);
+    domains = domains.concat(keys[i].slice(prefixLength));
 
     if (i < keys.length - 1) {
-      domains = domains.concat(stringToBytes(','));
+      domains = domains.concat(COMMA_BYTE);
     }
   }
 
