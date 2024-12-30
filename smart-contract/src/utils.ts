@@ -6,6 +6,7 @@ import {
   bytesToStr,
   Provider,
   SmartContract,
+  strToBytes,
   U256,
   Web3Provider,
 } from '@massalabs/massa-web3';
@@ -71,4 +72,34 @@ export async function getOwner(provider: Provider): Promise<string> {
   const contract = new SmartContract(provider, MNS_CONTRACT);
   const { value } = await contract.read('ownerAddress');
   return bytesToStr(value);
+}
+
+export async function getDomainsFromTarget(
+  provider: Provider,
+  target: string,
+): Promise<string[]> {
+  const ADDRESS_KEY_PREFIX = [0x4];
+  const prefix = Uint8Array.from([
+    ...DOMAIN_SEPARATOR_KEY,
+    ...ADDRESS_KEY_PREFIX,
+    ...strToBytes(target),
+  ]);
+  const keys = await provider.getStorageKeys(MNS_CONTRACT, prefix);
+  return keys.map((key) => bytesToStr(key.slice(prefix.length)));
+}
+
+export async function getDomainsFromTargetV2(
+  provider: Provider,
+  target: string,
+): Promise<string[]> {
+  const ADDRESS_KEY_PREFIX_V2 = [0x6];
+  const targetBytes = strToBytes(target);
+  const prefix = Uint8Array.from([
+    ...DOMAIN_SEPARATOR_KEY,
+    ...ADDRESS_KEY_PREFIX_V2,
+    targetBytes.length,
+    ...targetBytes,
+  ]);
+  const keys = await provider.getStorageKeys(MNS_CONTRACT, prefix);
+  return keys.map((key) => bytesToStr(key.slice(prefix.length)));
 }

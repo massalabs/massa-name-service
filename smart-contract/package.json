@@ -11,6 +11,7 @@
         "testDns": "tsx src/test.ts",
         "info": "tsx src/infos.ts",
         "migrate": "tsx src/migrate.ts",
+        "migrate2": "tsx src/migrate-step2.ts",
         "pause": "tsx src/pause.ts",
         "unpause": "tsx src/unpause.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",

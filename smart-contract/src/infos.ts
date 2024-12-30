@@ -1,5 +1,7 @@
 import {
   getDomains,
+  getDomainsFromTarget,
+  getDomainsFromTargetV2,
   getOwner,
   getTokenCounter,
   getTotalSupply,
@@ -24,3 +26,14 @@ try {
 } catch (e) {
   console.log('No total supply found');
 }
+
+// reverse resolve
+
+const target = 'AS1ZTEiyBCyVAdpMfdU7br3xxPSj99kNZTxVXhnuYH7DkDF6h9YK';
+
+// before migration
+const revRes = await getDomainsFromTarget(provider, target);
+console.log('target domains:', revRes);
+// after migration
+const revRes2 = await getDomainsFromTargetV2(provider, target);
+console.log('target domains V2 (should be same same):', revRes2);
