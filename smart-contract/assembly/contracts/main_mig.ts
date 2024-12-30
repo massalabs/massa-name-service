@@ -3,6 +3,7 @@ import {
   Context,
   Storage,
   balance,
+  generateEvent,
   getKeys,
   setBytecode,
   transferCoins,
@@ -440,3 +441,71 @@ export {
   name,
   totalSupply,
 } from '@massalabs/sc-standards/assembly/contracts/MRC721/enumerable/MRC721Enumerable';
+
+// we iterate over all the targetToDomains keys and migrate them to the new format.
+// The tricky part is that "getKeys" will also return already migrated keys.
+
+export function migrate(binaryArgs: StaticArray<u8>): void {
+  _onlyOwner();
+
+  const BATCH_SIZE = new Args(binaryArgs)
+    .nextI32()
+    .expect('batch size is missing or invalid');
+
+  let processedKeys = 0;
+  let keyIndex = 0;
+
+  const targetToDomainsPrefix = DOMAIN_SEPARATOR_KEY.concat(ADDRESS_KEY_PREFIX);
+  const targetToDomainsKeys = Storage.getKeys(targetToDomainsPrefix);
+  const totalKeys = targetToDomainsKeys.length;
+
+  generateEvent(
+    'start migration. nb total target keys: ' + totalKeys.toString(),
+  );
+
+  while (processedKeys < BATCH_SIZE) {
+    if (keyIndex == targetToDomainsKeys.length) {
+      generateEvent('Migration done.');
+      break;
+    }
+    const key = targetToDomainsKeys[keyIndex];
+    keyIndex++;
+
+    if (!Storage.has(key)) {
+      generateEvent('Should not happen, key not found');
+      continue;
+    }
+    const domainsBytes = Storage.get(key);
+
+    if (domainsBytes.length == 0) {
+      // already migrated key
+      continue;
+    }
+
+    let domainStart = 0;
+    for (let idx = 0; idx < domainsBytes.length; idx++) {
+      let lastDomainOffset = 0;
+      if (idx == domainsBytes.length - 1) {
+        // if last byte is not a coma, migrate the key
+        lastDomainOffset = 1;
+      } else {
+        // migrate key only if coma is found
+        if (domainsBytes[idx] != 44) {
+          continue;
+        }
+      }
+
+      const domainBytes = StaticArray.fromArray(
+        domainsBytes.slice(domainStart, idx + lastDomainOffset),
+      );
+      const newKey = key.concat(domainBytes);
+
+      Storage.set(newKey, []);
+      domainStart = idx + 1;
+    }
+    // delete old key
+    Storage.del(key);
+    processedKeys++;
+  }
+  generateEvent('done. processed keys:' + processedKeys.toString());
+}
