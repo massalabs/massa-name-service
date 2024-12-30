@@ -1,11 +1,13 @@
 import {
   getDomains,
+  getDomainsFromTarget,
   getOwner,
   getTokenCounter,
   getTotalSupply,
   initProvider,
 } from './utils';
 import { MNS_CONTRACT } from './config';
+import { MNS } from '@massalabs/massa-web3';
 
 const provider = await initProvider();
 
@@ -24,3 +26,14 @@ try {
 } catch (e) {
   console.log('No total supply found');
 }
+
+// reverse resolve
+
+const target = 'AS1ZTEiyBCyVAdpMfdU7br3xxPSj99kNZTxVXhnuYH7DkDF6h9YK';
+
+const contract = new MNS(provider, MNS_CONTRACT);
+const res = await contract.fromAddress(target);
+console.log('target domains:', res);
+
+const revRes = await getDomainsFromTarget(provider, target);
+console.log('target domains (should be same same):', res);
