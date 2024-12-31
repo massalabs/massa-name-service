@@ -48,6 +48,7 @@ const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
 const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
 const ADDRESS_KEY_PREFIX: StaticArray<u8> = [0x04];
 const LOCKED_KEY_PREFIX: StaticArray<u8> = [0x05];
+const ADDRESS_KEY_PREFIX_V2: StaticArray<u8> = [0x06];
 
 // Be careful if we edit the values here to increase the price, it requires to change the refund
 // logic in dnsFree function to avoid refunding more than the user paid with the old prices.
@@ -120,7 +121,7 @@ function domainToTargetKey(domain: string): StaticArray<u8> {
 
 function targetToDomainKeyPrefix(address: string): StaticArray<u8> {
   return DOMAIN_SEPARATOR_KEY.concat(
-    ADDRESS_KEY_PREFIX.concat(stringToBytes(address)),
+    ADDRESS_KEY_PREFIX_V2.concat(stringToBytes(address)),
   );
 }
 
