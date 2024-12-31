@@ -119,7 +119,10 @@ function domainToTargetKey(domainBytes: StaticArray<u8>): StaticArray<u8> {
 function targetToDomainKeyPrefix(
   targetBytes: StaticArray<u8>,
 ): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(ADDRESS_KEY_PREFIX_V2.concat(targetBytes));
+  const lenPrefix = StaticArray.fromArray([<u8>targetBytes.length]);
+  return DOMAIN_SEPARATOR_KEY.concat(
+    ADDRESS_KEY_PREFIX_V2.concat(lenPrefix).concat(targetBytes),
+  );
 }
 
 function targetToDomainKey(
