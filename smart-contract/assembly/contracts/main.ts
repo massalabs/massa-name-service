@@ -100,8 +100,8 @@ export function isValidDomain(domain: string): bool {
   return true;
 }
 
-export function isValidTarget(target: string): bool {
-  return target.length <= 150;
+export function isValidTarget(targetBytes: StaticArray<u8>): bool {
+  return targetBytes.length <= 150;
 }
 
 function domainToTokenIdKey(domainBytes: StaticArray<u8>): StaticArray<u8> {
@@ -188,12 +188,14 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
     .expect('target argument is missing or invalid');
   const owner = Context.caller().toString();
 
+  const targetBytes = stringToBytes(target);
+  const domainBytes = stringToBytes(domain);
+
   assert(isValidDomain(domain), 'Invalid domain');
-  assert(isValidTarget(target), 'Invalid target');
-  assert(
-    !Storage.has(domainToTargetKey(stringToBytes(domain))),
-    'Domain already registered',
-  );
+  assert(isValidTarget(targetBytes), 'Invalid target');
+
+  const domainToTargetKay = domainToTargetKey(domainBytes);
+  assert(!Storage.has(domainToTargetKay), 'Domain already registered');
 
   const counterBytes = Storage.get(COUNTER_KEY);
 
@@ -203,9 +205,8 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   _update(owner, counter, '');
 
   // Store the domain and token ID
-  const targetBytes = stringToBytes(target);
-  const domainBytes = stringToBytes(domain);
-  Storage.set(domainToTargetKey(domainBytes), targetBytes);
+
+  Storage.set(domainToTargetKay, targetBytes);
   Storage.set(targetToDomainKey(targetBytes, domainBytes), []);
   Storage.set(tokenIdToDomainKey(counterBytes), domainBytes);
   Storage.set(domainToTokenIdKey(domainBytes), counterBytes);
@@ -340,7 +341,8 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
     .nextString()
     .expect('target argument is missing or invalid');
 
-  assert(isValidTarget(newTarget), 'Invalid target');
+  const newTargetBytes = stringToBytes(newTarget);
+  assert(isValidTarget(newTargetBytes), 'Invalid target');
 
   const domainBytes = stringToBytes(domain);
   const tokenId = bytesToU256(Storage.get(domainToTokenIdKey(domainBytes)));
@@ -352,12 +354,13 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
   );
 
   // remove the old target
-  const oldTarget = Storage.get(domainToTargetKey(domainBytes));
+  const domainToTargetKay = domainToTargetKey(domainBytes);
+  const oldTarget = Storage.get(domainToTargetKay);
   Storage.del(targetToDomainKey(oldTarget, domainBytes));
   // Add the domain to the new target
-  Storage.set(targetToDomainKey(stringToBytes(newTarget), domainBytes), []);
+  Storage.set(targetToDomainKey(newTargetBytes, domainBytes), []);
   // Update the target for the domain
-  Storage.set(domainToTargetKey(domainBytes), stringToBytes(newTarget));
+  Storage.set(domainToTargetKay, newTargetBytes);
 }
 
 /**

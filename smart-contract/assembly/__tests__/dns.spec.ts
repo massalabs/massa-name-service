@@ -150,6 +150,15 @@ describe('Test DNS allocation', () => {
     mockBalance(scAddress, transferredAmount);
     dnsAlloc(args.serialize());
   });
+  throws('Invalid target', () => {
+    let args = new Args();
+    args.add(domain);
+    args.add('lol'.repeat(51));
+    mockBalance(owner, transferredAmount);
+    mockTransferredCoins(transferredAmount);
+    mockBalance(scAddress, transferredAmount);
+    dnsAlloc(args.serialize());
+  });
   throws('Domain already exists', () => {
     let args = new Args();
     args.add(domain);
