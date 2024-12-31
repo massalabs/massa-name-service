@@ -546,7 +546,7 @@ describe('Test dnsReverseResolve', () => {
       stringToBytes(domain),
     );
   });
-  throws('Test reverse resolve after free', () => {
+  test('Test reverse resolve after free', () => {
     let args = new Args();
     args.add(domain);
     args.add(target);

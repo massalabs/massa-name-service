@@ -46,7 +46,7 @@ const COUNTER_KEY: StaticArray<u8> = [0x00];
 const TOKEN_ID_KEY_PREFIX: StaticArray<u8> = [0x01];
 const TARGET_KEY_PREFIX: StaticArray<u8> = [0x02];
 const DOMAIN_KEY_PREFIX: StaticArray<u8> = [0x03];
-const ADDRESS_KEY_PREFIX: StaticArray<u8> = [0x04];
+// const ADDRESS_KEY_PREFIX: StaticArray<u8> = [0x04];
 const LOCKED_KEY_PREFIX: StaticArray<u8> = [0x05];
 const ADDRESS_KEY_PREFIX_V2: StaticArray<u8> = [0x06];
 
@@ -292,8 +292,6 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
 
   const prefix = targetToDomainKeyPrefix(targetAddress);
   const keys = getKeys(prefix);
-
-  assert(keys.length > 0, 'No domain found for the address');
 
   const prefixLength = prefix.length;
   let domains: u8[] = [];
