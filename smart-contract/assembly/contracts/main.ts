@@ -9,7 +9,6 @@ import {
 } from '@massalabs/massa-as-sdk';
 import {
   Args,
-  bytesToString,
   bytesToU256,
   stringToBytes,
   u256ToBytes,
@@ -101,32 +100,33 @@ export function isValidDomain(domain: string): bool {
   return true;
 }
 
-function domainToTokenIdKey(domain: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(
-    TOKEN_ID_KEY_PREFIX.concat(stringToBytes(domain)),
-  );
+export function isValidTarget(target: string): bool {
+  return target.length <= 150;
 }
 
-function tokenIdToDomainKey(tokenId: u256): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(
-    DOMAIN_KEY_PREFIX.concat(u256ToBytes(tokenId)),
-  );
+function domainToTokenIdKey(domainBytes: StaticArray<u8>): StaticArray<u8> {
+  return DOMAIN_SEPARATOR_KEY.concat(TOKEN_ID_KEY_PREFIX.concat(domainBytes));
 }
 
-function domainToTargetKey(domain: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(
-    TARGET_KEY_PREFIX.concat(stringToBytes(domain)),
-  );
+function tokenIdToDomainKey(tokenIdBytes: StaticArray<u8>): StaticArray<u8> {
+  return DOMAIN_SEPARATOR_KEY.concat(DOMAIN_KEY_PREFIX.concat(tokenIdBytes));
 }
 
-function targetToDomainKeyPrefix(address: string): StaticArray<u8> {
-  return DOMAIN_SEPARATOR_KEY.concat(
-    ADDRESS_KEY_PREFIX_V2.concat(stringToBytes(address)),
-  );
+function domainToTargetKey(domainBytes: StaticArray<u8>): StaticArray<u8> {
+  return DOMAIN_SEPARATOR_KEY.concat(TARGET_KEY_PREFIX.concat(domainBytes));
 }
 
-function targetToDomainKey(address: string, domain: string): StaticArray<u8> {
-  return targetToDomainKeyPrefix(address).concat(stringToBytes(domain));
+function targetToDomainKeyPrefix(
+  targetBytes: StaticArray<u8>,
+): StaticArray<u8> {
+  return DOMAIN_SEPARATOR_KEY.concat(ADDRESS_KEY_PREFIX_V2.concat(targetBytes));
+}
+
+function targetToDomainKey(
+  targetBytes: StaticArray<u8>,
+  domainBytes: StaticArray<u8>,
+): StaticArray<u8> {
+  return targetToDomainKeyPrefix(targetBytes).concat(domainBytes);
 }
 
 function lockedKey(): StaticArray<u8> {
@@ -186,18 +186,26 @@ export function dnsAlloc(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const owner = Context.caller().toString();
 
   assert(isValidDomain(domain), 'Invalid domain');
-  assert(!Storage.has(domainToTargetKey(domain)), 'Domain already registered');
+  assert(isValidTarget(target), 'Invalid target');
+  assert(
+    !Storage.has(domainToTargetKey(stringToBytes(domain))),
+    'Domain already registered',
+  );
 
-  const counter = bytesToU256(Storage.get(COUNTER_KEY));
+  const counterBytes = Storage.get(COUNTER_KEY);
+
+  const counter = bytesToU256(counterBytes);
 
   // Mint the token
   _update(owner, counter, '');
 
   // Store the domain and token ID
-  Storage.set(domainToTargetKey(domain), stringToBytes(target));
-  Storage.set(targetToDomainKey(target, domain), []);
-  Storage.set(tokenIdToDomainKey(counter), stringToBytes(domain));
-  Storage.set(domainToTokenIdKey(domain), u256ToBytes(counter));
+  const targetBytes = stringToBytes(target);
+  const domainBytes = stringToBytes(domain);
+  Storage.set(domainToTargetKey(domainBytes), targetBytes);
+  Storage.set(targetToDomainKey(targetBytes, domainBytes), []);
+  Storage.set(tokenIdToDomainKey(counterBytes), domainBytes);
+  Storage.set(domainToTokenIdKey(domainBytes), counterBytes);
   // @ts-ignore (fix for IDE)
   Storage.set(COUNTER_KEY, u256ToBytes(counter + u256.One));
 
@@ -239,26 +247,28 @@ export function dnsFree(binaryArgs: StaticArray<u8>): void {
   // Burn the token
   _update('', tokenId, '');
 
+  const tokenIdBytes = u256ToBytes(tokenId);
   // Retrieve the domain
-  const idToDomainKey = tokenIdToDomainKey(tokenId);
+  const idToDomainKey = tokenIdToDomainKey(tokenIdBytes);
   assert(Storage.has(idToDomainKey), 'Domain not registered');
-  const domain = bytesToString(Storage.get(idToDomainKey));
+
+  const domainBytes = Storage.get(idToDomainKey);
 
   // Retrieve and delete the target
-  const domainToTargetK = domainToTargetKey(domain);
-  const target = bytesToString(Storage.get(domainToTargetK));
+  const domainToTargetK = domainToTargetKey(domainBytes);
+  const targetBytes = Storage.get(domainToTargetK);
 
   // Delete all associated keys
   Storage.del(domainToTargetK);
-  Storage.del(targetToDomainKey(target, domain));
+  Storage.del(targetToDomainKey(targetBytes, domainBytes));
   Storage.del(idToDomainKey);
-  Storage.del(domainToTokenIdKey(domain));
+  Storage.del(domainToTokenIdKey(domainBytes));
 
   const finalBalance = balance();
   const storageCostsRefunded = finalBalance - initialBalance;
 
   const refundTotal =
-    calculateCreationCost(domain.length) / 2 +
+    calculateCreationCost(domainBytes.length) / 2 +
     storageCostsRefunded +
     Context.transferredCoins();
 
@@ -276,7 +286,7 @@ export function dnsResolve(args: StaticArray<u8>): StaticArray<u8> {
     .nextString()
     .expect('domain argument is missing or invalid');
 
-  return Storage.get(domainToTargetKey(domain));
+  return Storage.get(domainToTargetKey(stringToBytes(domain)));
 }
 
 /** Get a list of domain associated with an address
@@ -290,7 +300,7 @@ export function dnsReverseResolve(args: StaticArray<u8>): StaticArray<u8> {
     .nextString()
     .expect('address argument is missing or invalid');
 
-  const prefix = targetToDomainKeyPrefix(targetAddress);
+  const prefix = targetToDomainKeyPrefix(stringToBytes(targetAddress));
   const keys = getKeys(prefix);
 
   const prefixLength = prefix.length;
@@ -319,7 +329,6 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
   }
 
   const args = new Args(binaryArgs);
-
   const domain = args
     .nextString()
     .expect('domain argument is missing or invalid');
@@ -328,7 +337,10 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
     .nextString()
     .expect('target argument is missing or invalid');
 
-  const tokenId = bytesToU256(Storage.get(domainToTokenIdKey(domain)));
+  assert(isValidTarget(newTarget), 'Invalid target');
+
+  const domainBytes = stringToBytes(domain);
+  const tokenId = bytesToU256(Storage.get(domainToTokenIdKey(domainBytes)));
   const owner = _ownerOf(tokenId);
 
   assert(
@@ -337,12 +349,12 @@ export function dnsUpdateTarget(binaryArgs: StaticArray<u8>): void {
   );
 
   // remove the old target
-  const oldTarget = bytesToString(Storage.get(domainToTargetKey(domain)));
-  Storage.del(targetToDomainKey(oldTarget, domain));
+  const oldTarget = Storage.get(domainToTargetKey(domainBytes));
+  Storage.del(targetToDomainKey(oldTarget, domainBytes));
   // Add the domain to the new target
-  Storage.set(targetToDomainKey(newTarget, domain), []);
+  Storage.set(targetToDomainKey(stringToBytes(newTarget), domainBytes), []);
   // Update the target for the domain
-  Storage.set(domainToTargetKey(domain), stringToBytes(newTarget));
+  Storage.set(domainToTargetKey(domainBytes), stringToBytes(newTarget));
 }
 
 /**
@@ -382,10 +394,11 @@ export function getTokenIdFromDomain(
   const domain = args
     .nextString()
     .expect('domain argument is missing or invalid');
-  if (!Storage.has(domainToTokenIdKey(domain))) {
+  const domainBytes = stringToBytes(domain);
+  if (!Storage.has(domainToTokenIdKey(domainBytes))) {
     throw new Error('Domain not found');
   }
-  return Storage.get(domainToTokenIdKey(domain));
+  return Storage.get(domainToTokenIdKey(domainBytes));
 }
 
 /**
@@ -400,7 +413,8 @@ export function getDomainFromTokenId(
   const tokenId = args
     .nextU256()
     .expect('tokenId argument is missing or invalid');
-  return Storage.get(tokenIdToDomainKey(tokenId));
+  const tokenIdBytes = u256ToBytes(tokenId);
+  return Storage.get(tokenIdToDomainKey(tokenIdBytes));
 }
 
 /**
