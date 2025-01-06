@@ -13,6 +13,7 @@
         "migrate": "tsx src/migrate.ts",
         "pause": "tsx src/pause.ts",
         "unpause": "tsx src/unpause.ts",
+        "setOwner": "tsx src/setOwner.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",
         "prettier:fix": "prettier '**/src/**/*.ts' --write && as-prettier --write assembly",
         "lint": "eslint .",
