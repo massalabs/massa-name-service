@@ -1,5 +1,6 @@
 import {
   getDomains,
+  getDomainsFromTarget,
   getOwner,
   getTokenCounter,
   getTotalSupply,
@@ -24,3 +25,8 @@ try {
 } catch (e) {
   console.log('No total supply found');
 }
+
+// reverse resolve
+const target = 'AS1ZTEiyBCyVAdpMfdU7br3xxPSj99kNZTxVXhnuYH7DkDF6h9YK';
+const revRes = await getDomainsFromTarget(provider, target);
+console.log('target domains:', revRes);
