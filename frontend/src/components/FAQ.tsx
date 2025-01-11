@@ -1,23 +1,18 @@
 import { Accordion } from '@massalabs/react-ui-kit';
+import { faqData } from '../const/faq';
 
 export interface FAQData {
   question: string;
   answer: string;
 }
 
-interface FAQProps {
-  data: FAQData[];
-}
-
-export function FAQ(props: FAQProps) {
-  const { data } = props;
-  if (!data) return null;
+export function FAQ() {
   return (
     <>
       <section className="mb-8">
         <p className="mas-title mb-2">FAQ</p>
       </section>
-      {data.map((item, idx) => (
+      {faqData.map((item, idx) => (
         <Accordion
           key={idx}
           customClass="bg-primary border-none rounded-xl p-1 mb-10"
