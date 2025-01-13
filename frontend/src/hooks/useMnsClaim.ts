@@ -1,5 +1,5 @@
 import { formatAmount, useHandleOperation } from '@massalabs/react-ui-kit';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMnsStore } from '../store/mns';
 import { Mas, Provider } from '@massalabs/massa-web3';
 
@@ -13,6 +13,11 @@ export function useMnsClaim(provider: Provider) {
   const [allocCost, setAllocCost] = useState<bigint>(0n);
   const [error, setError] = useState<string | null>(null);
   const [loadPrice, setLoadPrice] = useState<boolean>(false);
+
+  useEffect(() => {
+    onDomainChange(domain);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, mnsContract]);
 
   async function claim() {
     const operation = await mnsContract.alloc(domain, provider.address, {

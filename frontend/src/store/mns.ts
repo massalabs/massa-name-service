@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { DnsUserEntryListResult, DnsAllocParams } from '../utils/interface';
 import {
-  Account,
   Args,
   CHAIN_ID,
   JsonRpcProvider,
@@ -40,7 +39,10 @@ const createMnsStore = () =>
 
     getAllocationCost: async (params: DnsAllocParams) => {
       try {
-        return await get().mnsContract.dnsAllocCost(params.domain);
+        return await get().mnsContract.dnsAllocCost(params.domain, {
+          // TODO: Check why readOnly fails when using caller with no transaction
+          // caller: 'AU1dvPZNjcTQfNQQuysWyxLLhEzw4kB9cGW2RMMVAQGrkzZHqWGD',
+        });
       } catch (error) {
         throw Error(
           'Name can only be 2-100 characters long and can contain only lowercase letters, numbers, and hyphens.',
@@ -57,7 +59,7 @@ const createMnsStore = () =>
           func: 'balanceOf',
           parameter: new Args().addString(userAddress),
           // TODO: Check why readOnly fails when using caller with no transaction
-          caller: 'AU1dvPZNjcTQfNQQuysWyxLLhEzw4kB9cGW2RMMVAQGrkzZHqWGD',
+          // caller: 'AU1dvPZNjcTQfNQQuysWyxLLhEzw4kB9cGW2RMMVAQGrkzZHqWGD',
         });
 
         console.log(resultBalance);
@@ -145,7 +147,8 @@ const createMnsStore = () =>
     },
 
     setMnsContract: (provider: Provider, network: Network) => {
-      switch (network.chainId) {
+      // TODO: Bearby return chianId in number instead of bigint: Maybe we should handle this in wallet provider
+      switch (BigInt(network.chainId)) {
         case CHAIN_ID.Buildnet:
           set({ mnsContract: MNS.buildnet(provider) });
           break;
@@ -153,6 +156,7 @@ const createMnsStore = () =>
           set({ mnsContract: MNS.mainnet(provider) });
           break;
         default:
+          set({ mnsContract: MNS.buildnet(provider) });
           throw new Error(
             'SC_ADDRESS not found for chainId : ' + network.chainId,
           );

@@ -2,22 +2,14 @@ import { Button, formatAmount } from '@massalabs/react-ui-kit';
 import { InputWithRightText } from './InputWithRightText';
 import { Mas, Provider } from '@massalabs/massa-web3';
 import { useMnsClaim } from '../hooks/useMnsClaim';
-import { useEffect } from 'react';
-import { useMnsStore } from '../store/mns';
 
 interface MnsClaimProps {
   provider: Provider;
 }
 
 export function MNSClaim({ provider }: MnsClaimProps) {
-  const { onDomainChange, claim, error, loadPrice, allocCost, domain } =
+  const { onDomainChange, claim, error, loadPrice, allocCost } =
     useMnsClaim(provider);
-  const { mnsContract } = useMnsStore();
-
-  useEffect(() => {
-    onDomainChange(domain);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, mnsContract]);
 
   return (
     <div>
@@ -38,8 +30,7 @@ export function MNSClaim({ provider }: MnsClaimProps) {
             <p className="mb-4 font-light text-neutral">Loading price...</p>
           ) : (
             <p className="mb-4 font-light text-neutral">
-              {/* TODO: fix to get the same behavior than prod */}
-              Price {formatAmount(allocCost, Mas.NB_DECIMALS).preview} MAS
+              Price {formatAmount(allocCost, Mas.NB_DECIMALS).full} MAS
             </p>
           )}
         </div>
