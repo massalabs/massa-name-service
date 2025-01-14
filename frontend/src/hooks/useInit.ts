@@ -10,7 +10,6 @@ export function useInit() {
 
   useEffect(() => {
     if (!provider || !network) return;
-
     setMnsContract(provider, network);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [network, provider]);

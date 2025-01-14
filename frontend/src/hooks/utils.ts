@@ -19,26 +19,3 @@ export function handleError(
     setError('An unexpected error occurred');
   }
 }
-
-export const OPERATION_MESSAGES = {
-  delete: {
-    pending: 'Entry deleting in progress',
-    success: 'Successfully deleted',
-    error: 'Failed to delete',
-  },
-  updateOwner: {
-    pending: 'Updating target address in progress',
-    success: 'Successfully updated',
-    error: 'Failed to update',
-  },
-  updateTarget: {
-    pending: 'Updating ownership in progress',
-    success: 'Successfully updated',
-    error: 'Failed to update',
-  },
-  claim: {
-    pending: 'Entry registering in progress',
-    success: 'Successfully registered',
-    error: 'Failed to register',
-  },
-};

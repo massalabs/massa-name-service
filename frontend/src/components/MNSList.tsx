@@ -8,7 +8,7 @@ import { UpdateOwnerModal } from './UpdateOwnerModal';
 
 export function MNSList() {
   const { connectedAccount } = useAccountStore();
-  const [domain, setDomain] = useState<string>('');
+  const [domainToUpdate, setDomainToUpdate] = useState<string>('');
   const [ownershipModalOpen, setOwnershipModalOpen] = useState<boolean>(false);
   const [updateTargetModalOpen, setTargetModalOpen] = useState<boolean>(false);
 
@@ -16,18 +16,21 @@ export function MNSList() {
   const { listSpinning, list } = useMnsStore();
 
   const onUpdateTarget = (domain: string) => {
-    setDomain(domain);
+    setDomainToUpdate(domain);
     setTargetModalOpen(true);
   };
 
   const onUpdateOwnership = (domain: string) => {
-    setDomain(domain);
+    setDomainToUpdate(domain);
     setOwnershipModalOpen(true);
   };
 
   return (
     <div>
-      <Accordion customClass="border-none" title="Owned MNS">
+      <Accordion
+        customClass="border-none"
+        title={`Owned MNS  (${list.length})`}
+      >
         {listSpinning ? (
           <div className="flex items-center justify-center">
             <Spinner />
@@ -37,12 +40,12 @@ export function MNSList() {
             <UpdateTargetModal
               isOpen={updateTargetModalOpen}
               close={() => setTargetModalOpen(false)}
-              domain={domain}
+              domain={domainToUpdate}
             />
             <UpdateOwnerModal
               isOpen={ownershipModalOpen}
               close={() => setOwnershipModalOpen(false)}
-              domain={domain}
+              domain={domainToUpdate}
               owner={connectedAccount!.address}
             />
 

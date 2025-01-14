@@ -24,16 +24,16 @@ interface MnsStoreState {
   mnsContract: MNS;
   list: DnsUserEntryListResult[];
   listSpinning: boolean;
-  domain: string;
-  allocCost: bigint;
+  newDomain: string;
+  allocationCost: bigint;
   mnsInputError: string | null;
   isPriceLoading: boolean;
 
   setMnsContract: (provider: Provider, network: Network) => void;
   setList: (list: DnsUserEntryListResult[]) => void;
   setListSpinning: (listSpinning: boolean) => void;
-  setDomain: (domain: string) => void;
-  setAllocCost: (allocCost: bigint) => void;
+  setNewDomain: (domain: string) => void;
+  setAllocationCost: (allocationCost: bigint) => void;
   setMnsInputError: (error: string | null) => void;
   setIsPriceLoading: (isPriceLoading: boolean) => void;
 }
@@ -43,8 +43,8 @@ const createMnsStore = () =>
     mnsContract: MNS.buildnet(JsonRpcProvider.buildnet()),
     list: [],
     listSpinning: false,
-    domain: '',
-    allocCost: 0n,
+    newDomain: '',
+    allocationCost: 0n,
     isPriceLoading: false,
     mnsInputError: null,
 
@@ -61,12 +61,12 @@ const createMnsStore = () =>
       set({ listSpinning });
     },
 
-    setDomain: (domain: string) => {
-      set({ domain });
+    setNewDomain: (newDomain: string) => {
+      set({ newDomain });
     },
 
-    setAllocCost: (allocCost: bigint) => {
-      set({ allocCost });
+    setAllocationCost: (allocationCost: bigint) => {
+      set({ allocationCost });
     },
 
     setMnsInputError: (mnsInputError: string | null) => {

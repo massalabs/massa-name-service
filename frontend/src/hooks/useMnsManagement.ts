@@ -8,7 +8,11 @@ import { useMnsStore } from '../store/mnsStore';
 import { Args } from '@massalabs/massa-web3';
 import { DnsTransferParams } from '../utils/interface';
 import { useMnsList } from './useMnsList';
-import { OPERATION_MESSAGES } from './utils';
+import {
+  DELETE_OP_MESSAGE,
+  UPDATE_OWNER_OP_MESSAGE,
+  UPDATE_TARGET_OP_MESSAGE,
+} from '../const/operationMessages';
 
 export function useMnsManagement() {
   const { setMnsContract, mnsContract } = useMnsStore();
@@ -22,7 +26,7 @@ export function useMnsManagement() {
 
     try {
       const operation = await mnsContract.free(name);
-      await handleOperation(operation, OPERATION_MESSAGES.delete);
+      await handleOperation(operation, DELETE_OP_MESSAGE);
       await getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
@@ -38,7 +42,7 @@ export function useMnsManagement() {
     // TODO: Check if really the name
     try {
       const operation = await mnsContract.updateTarget(domain, targetAddress);
-      await handleOperation(operation, OPERATION_MESSAGES.updateTarget);
+      await handleOperation(operation, UPDATE_TARGET_OP_MESSAGE);
 
       // TODO: Domain are not fetched if balance is 0: Caused by the
       // readSc that fails if Address never made a transaction
@@ -64,7 +68,7 @@ export function useMnsManagement() {
         .addU256(tokenId);
 
       const operation = await mnsContract.call('transferFrom', args);
-      await handleOperation(operation, OPERATION_MESSAGES.updateOwner);
+      await handleOperation(operation, UPDATE_OWNER_OP_MESSAGE);
 
       await getUserDomains(provider.address);
     } catch (error) {

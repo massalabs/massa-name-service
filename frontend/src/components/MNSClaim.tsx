@@ -6,14 +6,15 @@ import { useMnsAllocation } from '../hooks/useMnsAllocation';
 
 export function MNSClaim() {
   const {
-    onDomainInputChange,
-    claim,
     mnsInputError,
-    allocCost,
+    allocationCost,
     isPriceLoading,
+    claim,
+    onDomainInputChange,
   } = useMnsAllocation();
 
-  const isRegisterDisabled = !!mnsInputError || isPriceLoading || !allocCost;
+  const isRegisterDisabled =
+    !!mnsInputError || isPriceLoading || !allocationCost;
 
   return (
     <div>
@@ -34,7 +35,7 @@ export function MNSClaim() {
             <p className="mb-4 font-light text-neutral">Loading price...</p>
           ) : (
             <p className="mb-4 font-light text-neutral">
-              Price {formatAmount(allocCost, Mas.NB_DECIMALS).full} MAS
+              Price {formatAmount(allocationCost, Mas.NB_DECIMALS).full} MAS
             </p>
           )}
         </div>

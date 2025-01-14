@@ -1,9 +1,3 @@
-export interface DnsAllocParams {
-  domain: string;
-  targetAddress: string;
-  coins?: bigint;
-}
-
 export interface DnsTransferParams {
   currentOwner: string;
   newOwner: string;

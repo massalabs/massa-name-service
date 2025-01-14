@@ -2,54 +2,53 @@
 
 import { useAccountStore, useHandleOperation } from '@massalabs/react-ui-kit';
 import { useMnsStore } from '../store/mnsStore';
-import { DnsAllocParams } from '../utils/interface';
 import { useMnsList } from './useMnsList';
-import { insufficientFundsMessage, OPERATION_MESSAGES } from './utils';
+import { insufficientFundsMessage } from './utils';
+import {
+  INVALID_MNS_ERROR_MESSAGE,
+  UNEXPECTED_MNS_ERROR_MESSAGE,
+} from '../const/errorMessages';
+import { CLAIM_OP_MESSAGE } from '../const/operationMessages';
 
 export function useMnsAllocation() {
   const {
     mnsContract,
-    domain,
-    setDomain,
+    newDomain,
+    setNewDomain,
     mnsInputError,
     setMnsInputError,
     isPriceLoading,
     setIsPriceLoading,
-    allocCost,
-    setAllocCost,
+    allocationCost,
+    setAllocationCost,
   } = useMnsStore();
 
   const { handleOperation, isPending } = useHandleOperation();
   const { getUserDomains } = useMnsList();
   const { connectedAccount: provider } = useAccountStore();
 
-  async function getAllocationCost(params: DnsAllocParams) {
-    try {
-      return await mnsContract.dnsAllocCost(params.domain);
-    } catch (error) {
-      throw Error(
-        'Name can only be 2-100 characters long and can contain only lowercase letters, numbers, and hyphens.',
-      );
-    }
+  async function getAllocationCost(domain: string) {
+    return await mnsContract.dnsAllocCost(domain);
   }
 
   async function claim() {
     if (!provider) return;
 
-    const operation = await mnsContract.alloc(domain, provider.address, {
-      coins: allocCost,
+    const operation = await mnsContract.alloc(newDomain, provider.address, {
+      coins: allocationCost,
     });
-    await handleOperation(operation, OPERATION_MESSAGES.claim);
+
+    await handleOperation(operation, CLAIM_OP_MESSAGE);
 
     getUserDomains(provider.address);
-    setDomain('');
+    setNewDomain('');
   }
 
   async function onDomainInputChange(domain: string) {
     if (!provider) return;
     setMnsInputError(null);
     setIsPriceLoading(true);
-    setDomain(domain);
+    setNewDomain(domain);
 
     if (!domain) {
       resetCostAndLoading();
@@ -65,11 +64,7 @@ export function useMnsAllocation() {
     }
 
     try {
-      const cost = await getAllocationCost({
-        domain,
-        targetAddress: provider.address ?? '',
-      });
-
+      const cost = await getAllocationCost(domain);
       const targetBalance = await provider.balance(false);
 
       if (cost > targetBalance) {
@@ -78,7 +73,7 @@ export function useMnsAllocation() {
         return;
       }
 
-      setAllocCost(cost);
+      setAllocationCost(cost);
     } catch (err) {
       handleCostError(err);
     } finally {
@@ -87,21 +82,17 @@ export function useMnsAllocation() {
   }
 
   function resetCostAndLoading(cost: bigint = 0n) {
-    setAllocCost(cost);
+    setAllocationCost(cost);
     setIsPriceLoading(false);
   }
 
-  function handleCostError(err: unknown) {
-    if (err instanceof Error) {
-      setMnsInputError(err.message);
+  function handleCostError(error: unknown) {
+    if (error instanceof Error && error.message.includes('Invalid domain')) {
+      setMnsInputError(INVALID_MNS_ERROR_MESSAGE);
     } else {
-      if (err instanceof Error) {
-        setMnsInputError(`An unexpected error occurred ${err.message} `);
-      } else {
-        setMnsInputError('An unexpected error occurred');
-      }
+      setMnsInputError(UNEXPECTED_MNS_ERROR_MESSAGE);
+      console.error('Error fetching allocation cost', error);
     }
-
     resetCostAndLoading();
   }
 
@@ -109,11 +100,11 @@ export function useMnsAllocation() {
     claim,
     onDomainInputChange,
     getUserDomains,
-    allocCost,
+    allocationCost,
     isPriceLoading,
     mnsInputError,
     isPending,
     mnsContract,
-    domain,
+    newDomain,
   };
 }
