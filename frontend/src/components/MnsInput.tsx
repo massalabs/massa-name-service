@@ -1,21 +1,9 @@
 import { InputMessage, InputProps } from '@massalabs/react-ui-kit';
 import { debounce } from 'lodash';
 
-export interface InputWithRightTextProps extends InputProps {
-  rightText: string;
-}
-
-export function InputWithRightText(props: InputWithRightTextProps) {
-  const {
-    error,
-    warning,
-    success,
-    onChange,
-    disable,
-    customClass,
-    rightText,
-    ...rest
-  } = props;
+export function MnsInput(props: InputProps) {
+  const { error, warning, success, onChange, disable, customClass, ...rest } =
+    props;
 
   const disabledClass = disable ? 'border-0' : '';
   const errorClass = error ? 'border-s-error' : '';
@@ -48,7 +36,7 @@ export function InputWithRightText(props: InputWithRightTextProps) {
             data-testid="password-icon"
             disabled={true}
           >
-            {rightText}
+            .massa
           </button>
         </div>
         <InputMessage error={error} warning={warning} success={success} />

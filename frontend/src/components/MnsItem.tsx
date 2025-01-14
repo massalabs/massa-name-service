@@ -28,22 +28,22 @@ export function MnsItem({
       text.length > maxLength ? `${text.slice(0, maxLength)}${suffix}` : text;
 
     return (
-      <div className="cursor-pointer">
+      <>
         {text.length > maxLength ? (
           <Tooltip body={text}>
             <Clipboard rawContent={`${displayText}...`} />
           </Tooltip>
         ) : (
-          <div className="w-fit hover:cursor-pointer">
+          <div className="w-fit">
             <Clipboard rawContent={displayText} />
           </div>
         )}
-      </div>
+      </>
     );
   };
 
   return (
-    <div className="flex grow justify-between bg-secondary rounded-xl p-4 mb-4 gap-6 cursor-pointer">
+    <div className="flex grow justify-between bg-secondary rounded-xl p-4 mb-4 gap-6">
       <div className="w-1/3">
         {formatTextWithTooltip(`${item.domain}.massa`, 22)}
       </div>

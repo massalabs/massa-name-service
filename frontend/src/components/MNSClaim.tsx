@@ -1,5 +1,5 @@
 import { Button, formatAmount } from '@massalabs/react-ui-kit';
-import { InputWithRightText } from './InputWithRightText';
+import { MnsInput } from './MnsInput';
 import { Mas } from '@massalabs/massa-web3';
 
 import { useMnsAllocation } from '../hooks/useMnsAllocation';
@@ -20,9 +20,8 @@ export function MNSClaim() {
     <div>
       <div className="grid grid-cols-4 gap-2">
         <div className="col-span-3">
-          <InputWithRightText
+          <MnsInput
             customClass="w-96 border-none"
-            rightText=".massa"
             placeholder="Enter a domain"
             onChange={(e) => {
               onDomainInputChange(e.target.value);
