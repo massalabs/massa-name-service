@@ -5,11 +5,9 @@ import { Mas, Provider } from '@massalabs/massa-web3';
 
 export function useMnsClaim(provider: Provider) {
   const [domain, setDomain] = useState<string>('');
-  const { mnsContract, getAllocationCost, resolve, getUserEntryList } =
-    useMnsStore();
+  const { mnsContract, getAllocationCost, getUserDomains } = useMnsStore();
 
   const { handleOperation } = useHandleOperation();
-
   const [allocCost, setAllocCost] = useState<bigint>(0n);
   const [error, setError] = useState<string | null>(null);
   const [loadPrice, setLoadPrice] = useState<boolean>(false);
@@ -30,7 +28,7 @@ export function useMnsClaim(provider: Provider) {
       error: 'Failed to register',
     });
 
-    getUserEntryList(provider, provider.address);
+    getUserDomains(provider, provider.address);
     setDomain('');
   }
 
@@ -45,7 +43,7 @@ export function useMnsClaim(provider: Provider) {
     }
 
     // TODO: Should we get owner instead of target? or both?
-    const target = await resolve(domain);
+    const target = await mnsContract.resolve(domain);
     if (target) {
       setError(`Domain already linked to ${target}`);
       resetCostAndLoading();
@@ -91,8 +89,13 @@ export function useMnsClaim(provider: Provider) {
     if (err instanceof Error) {
       setError(err.message);
     } else {
-      setError('An unexpected error occurred');
+      if (err instanceof Error) {
+        setError(`An unexpected error occurred ${err.message} `);
+      } else {
+        setError('An unexpected error occurred');
+      }
     }
+
     resetCostAndLoading();
   }
 

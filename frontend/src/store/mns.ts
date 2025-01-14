@@ -8,22 +8,14 @@ import {
   Network,
   Provider,
   U256,
-  bytesToStr,
 } from '@massalabs/massa-web3';
-import { getTargetKey, getDomainKey } from '../const/dataStoreKeys';
 
 interface MnsStoreState {
   mnsContract: MNS;
   list: DnsUserEntryListResult[];
   listSpinning: boolean;
-  resolve: (domain: string) => Promise<string>;
   getAllocationCost: (params: DnsAllocParams) => Promise<bigint>;
-  getUserEntryList: (provider: Provider, userAddress: string) => Promise<void>;
-  fetchDomains: (
-    provider: Provider,
-    tokenIdsBytes: Uint8Array[],
-  ) => Promise<string[]>;
-  fetchTargets: (provider: Provider, domains: string[]) => Promise<string[]>;
+  getUserDomains: (provider: Provider, userAddress: string) => Promise<void>;
   setMnsContract: (provider: Provider, network: Network) => void;
 }
 
@@ -32,10 +24,6 @@ const createMnsStore = () =>
     mnsContract: MNS.buildnet(JsonRpcProvider.buildnet()),
     list: [],
     listSpinning: false,
-
-    resolve: async (domain: string) => {
-      return await get().mnsContract.resolve(domain);
-    },
 
     getAllocationCost: async (params: DnsAllocParams) => {
       try {
@@ -50,9 +38,8 @@ const createMnsStore = () =>
       }
     },
 
-    getUserEntryList: async (provider: Provider, userAddress: string) => {
+    getUserDomains: async (provider: Provider, userAddress: string) => {
       set({ listSpinning: true });
-
       try {
         const resultBalance = await provider.readSC({
           target: get().mnsContract.address,
@@ -62,7 +49,10 @@ const createMnsStore = () =>
           // caller: 'AU1dvPZNjcTQfNQQuysWyxLLhEzw4kB9cGW2RMMVAQGrkzZHqWGD',
         });
 
-        console.log(resultBalance);
+        if (resultBalance.info.error) {
+          // TODO: Check if right error message
+          throw Error('Failed to fetch balanceOf address not found');
+        }
 
         const balance = U256.fromBytes(resultBalance.value);
 
@@ -72,78 +62,21 @@ const createMnsStore = () =>
           return;
         }
 
-        const filter = `ownedTokens${userAddress}`;
-        const ownedKeys = await provider.getStorageKeys(
-          get().mnsContract.address,
-          filter,
-          false,
-        );
-
-        if (!ownedKeys) {
-          set({ list: [] });
-          set({ listSpinning: false });
-          return;
-        }
-
-        const tokenIdsBytes = ownedKeys.map((key) => key.slice(filter.length));
-        const tokenIds = tokenIdsBytes.map((bytes) =>
-          U256.fromBytes(Uint8Array.from(bytes)),
-        );
-
-        const domains = await get().fetchDomains(provider, tokenIdsBytes);
-        const targets = await get().fetchTargets(provider, domains);
-
+        const domains = await get().mnsContract.getOwnedDomains(userAddress);
+        const targets = await get().mnsContract.getTargets(domains);
+        const tokenIds = await get().mnsContract.getTokenIds(domains);
         const newList = domains.map((domain, index) => ({
           domain,
           targetAddress: targets[index],
           tokenId: tokenIds[index],
         }));
-
         set({ list: newList });
       } catch (error) {
+        console.error('Failed to fetch user entries', error);
         set({ list: [] });
       } finally {
         set({ listSpinning: false });
       }
-    },
-
-    async fetchDomains(
-      provider: Provider,
-      tokenIdsBytes: Uint8Array[],
-    ): Promise<string[]> {
-      const mnsContract = get().mnsContract;
-      if (!mnsContract) {
-        throw new Error('MNS contract not set');
-      }
-      const domainsDataStoreEntries = tokenIdsBytes.map((id) =>
-        getDomainKey(id),
-      );
-      const domainsRes = await provider.readStorage(
-        mnsContract.address,
-        domainsDataStoreEntries,
-        false,
-      );
-      return domainsRes.map(bytesToStr);
-    },
-
-    async fetchTargets(
-      provider: Provider,
-      domains: string[],
-    ): Promise<string[]> {
-      const mnsContract = get().mnsContract;
-      if (!mnsContract) {
-        throw new Error('MNS contract not set');
-      }
-
-      const targetDataStoreEntries = domains.map((d) => getTargetKey(d));
-
-      const targetsRes = await provider.readStorage(
-        mnsContract.address,
-        targetDataStoreEntries,
-        false,
-      );
-
-      return targetsRes.map(bytesToStr);
     },
 
     setMnsContract: (provider: Provider, network: Network) => {

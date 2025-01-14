@@ -48,24 +48,22 @@ export function MNSList({ provider }: MNSListProps) {
   const { callSmartContract } = useWriteSmartContract(provider);
   const { handleOperation, isPending } = useHandleOperation();
 
-  const { getUserEntryList, listSpinning, list, mnsContract } = useMnsStore();
+  const { getUserDomains, listSpinning, list, mnsContract } = useMnsStore();
 
   useEffect(() => {
-    getUserEntryList(provider, provider.address);
+    getUserDomains(provider, provider.address);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.address]);
 
   async function deleteDnsEntry(name: string) {
-    // For calls Users need balance
     try {
-      // TODO: Why it fails the first time and works the second time?
       const operation = await mnsContract.free(name);
       await handleOperation(operation, {
         pending: 'Entry deleting in progress',
         success: 'Successfully deleted',
         error: 'Failed to delete',
       });
-      await getUserEntryList(provider, provider.address);
+      await getUserDomains(provider, provider.address);
     } catch (error) {
       console.log(error);
       toast.error('Failed to delete');
@@ -88,7 +86,7 @@ export function MNSList({ provider }: MNSListProps) {
       // TODO: Domain are not fetched if balance is 0: Caused by the
       // readSc that fails if Address never made a transaction
       // Temporary fixed by using another address in the readSc
-      await getUserEntryList(provider, provider.address);
+      await getUserDomains(provider, provider.address);
     } catch (error) {
       toast.error('Failed to update');
     }
@@ -115,7 +113,7 @@ export function MNSList({ provider }: MNSListProps) {
       },
     );
 
-    await getUserEntryList(provider, provider.address);
+    await getUserDomains(provider, provider.address);
   }
 
   // How to not reload all the list if delete or add a new entry but just update the list?
@@ -206,7 +204,7 @@ export function MNSList({ provider }: MNSListProps) {
             <div>
               {list.length === 0 && (
                 <div className="flex items-center justify-center">
-                  <p className="mas-body">No MNS owned</p>
+                  <p className="mas-body">No MNS found</p>
                 </div>
               )}
               {list.map((item, idx) => (
