@@ -1,7 +1,7 @@
 import { Card } from './components/Card';
 import { FAQ } from './components/FAQ';
-import { Button, ConnectMassaWallet, Toast } from '@massalabs/react-ui-kit';
-import { MNSManagement } from './components/MNSManagement';
+import { ConnectMassaWallet, Button, Toast } from '@massalabs/react-ui-kit';
+import { MNSManagement } from './components/MnsManagement';
 
 function App() {
   return (

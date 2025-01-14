@@ -7,11 +7,10 @@ export interface DnsAllocParams {
 export interface DnsTransferParams {
   currentOwner: string;
   newOwner: string;
-  tokenId: bigint;
+  domain: string;
 }
 
 export interface DnsUserEntryListResult {
   domain: string;
   targetAddress: string;
-  tokenId: bigint;
 }
