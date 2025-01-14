@@ -1,6 +1,6 @@
 import { formatAmount, useHandleOperation } from '@massalabs/react-ui-kit';
 import { useEffect, useState } from 'react';
-import { useMnsStore } from '../store/mns';
+import { useMnsStore } from '../store/mnsStore';
 import { Mas, Provider } from '@massalabs/massa-web3';
 
 export function useMnsClaim(provider: Provider) {

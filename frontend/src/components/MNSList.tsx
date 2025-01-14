@@ -27,7 +27,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Args, Provider } from '@massalabs/massa-web3';
 import { DnsTransferParams } from '../utils/interface';
-import { useMnsStore } from '../store/mns';
+import { useMnsStore } from '../store/mnsStore';
 
 interface MNSListProps {
   provider: Provider;

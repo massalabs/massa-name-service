@@ -80,7 +80,7 @@ const createMnsStore = () =>
     },
 
     setMnsContract: (provider: Provider, network: Network) => {
-      // TODO: Bearby return chianId in number instead of bigint: Maybe we should handle this in wallet provider
+      // TODO: Bearby return chianId in number instead of bigint: We should handle this in wallet provider
       switch (BigInt(network.chainId)) {
         case CHAIN_ID.Buildnet:
           set({ mnsContract: MNS.buildnet(provider) });

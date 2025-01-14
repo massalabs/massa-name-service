@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { MNSClaim } from './MNSClaim';
 import { MNSList } from './MNSList';
 import { useAccountStore } from '@massalabs/react-ui-kit';
-import { useMnsStore } from '../store/mns';
+import { useMnsStore } from '../store/mnsStore';
 
 export function MNSManagement() {
   const { connectedAccount, network } = useAccountStore();
