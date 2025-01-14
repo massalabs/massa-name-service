@@ -1,7 +1,6 @@
 import { Button, formatAmount } from '@massalabs/react-ui-kit';
 import { MnsInput } from './MnsInput';
 import { Mas } from '@massalabs/massa-web3';
-
 import { useMnsAllocation } from '../hooks/useMnsAllocation';
 
 export function MNSClaim() {

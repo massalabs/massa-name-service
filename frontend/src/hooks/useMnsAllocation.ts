@@ -1,5 +1,3 @@
-// useMnsAlloc
-
 import { useAccountStore, useHandleOperation } from '@massalabs/react-ui-kit';
 import { useMnsStore } from '../store/mnsStore';
 import { useMnsList } from './useMnsList';
@@ -9,6 +7,7 @@ import {
   UNEXPECTED_MNS_ERROR_MESSAGE,
 } from '../const/errorMessages';
 import { CLAIM_OP_MESSAGE } from '../const/operationMessages';
+import { useEffect } from 'react';
 
 export function useMnsAllocation() {
   const {
@@ -26,6 +25,12 @@ export function useMnsAllocation() {
   const { handleOperation, isPending } = useHandleOperation();
   const { getUserDomains } = useMnsList();
   const { connectedAccount: provider } = useAccountStore();
+
+  useEffect(() => {
+    if (!mnsContract) return;
+    onDomainInputChange(newDomain);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mnsContract]);
 
   async function getAllocationCost(domain: string) {
     return await mnsContract.dnsAllocCost(domain);
@@ -100,6 +105,7 @@ export function useMnsAllocation() {
     claim,
     onDomainInputChange,
     getUserDomains,
+    getAllocationCost,
     allocationCost,
     isPriceLoading,
     mnsInputError,
