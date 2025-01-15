@@ -1,4 +1,3 @@
-import { Args, U256 } from '@massalabs/massa-web3';
 import { useMnsStore } from '../store/mnsStore';
 
 export function useMnsList() {
@@ -9,17 +8,7 @@ export function useMnsList() {
     setListSpinning(true);
 
     try {
-      const resultBalance = await readOnlyMnsContract.read(
-        'balanceOf',
-        new Args().addString(userAddress),
-      );
-
-      if (resultBalance.info.error) {
-        // TODO: Check if right error message
-        throw Error('Failed to fetch balanceOf address not found');
-      }
-
-      const balance = U256.fromBytes(resultBalance.value);
+      const balance = await readOnlyMnsContract.balanceOf(userAddress);
 
       if (balance === 0n) {
         setList([]);

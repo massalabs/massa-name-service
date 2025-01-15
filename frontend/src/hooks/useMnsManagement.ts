@@ -61,15 +61,12 @@ export function useMnsManagement() {
   }: DnsTransferParams) {
     if (!provider) return;
     try {
-      const tokenId = await mnsContract.getTokenId(domain);
-      let args = new Args()
-        .addString(currentOwner)
-        .addString(newOwner)
-        .addU256(tokenId);
-
-      const operation = await mnsContract.call('transferFrom', args);
+      const operation = await mnsContract.transferFrom(
+        currentOwner,
+        newOwner,
+        domain,
+      );
       await handleOperation(operation, UPDATE_OWNER_OP_MESSAGE);
-
       await getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
