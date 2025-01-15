@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 export function useMnsAllocation() {
   const {
     mnsContract,
+    readOnlyMnsContract,
     newDomain,
     setNewDomain,
     mnsInputError,
@@ -33,7 +34,7 @@ export function useMnsAllocation() {
   }, [mnsContract]);
 
   async function getAllocationCost(domain: string) {
-    return await mnsContract.dnsAllocCost(domain);
+    return await readOnlyMnsContract.dnsAllocCost(domain);
   }
 
   async function claim() {
@@ -61,7 +62,7 @@ export function useMnsAllocation() {
     }
 
     // TODO: Should we get owner instead of target? or both?
-    const target = await mnsContract.resolve(domain);
+    const target = await readOnlyMnsContract.resolve(domain);
     if (target) {
       setMnsInputError(`Domain already linked to ${target}`);
       resetCostAndLoading();
@@ -70,10 +71,14 @@ export function useMnsAllocation() {
 
     try {
       const cost = await getAllocationCost(domain);
-      const targetBalance = await provider.balance(false);
+      const resultBalance = await readOnlyMnsContract.provider.balanceOf([
+        provider.address.toString(),
+      ]);
 
-      if (cost > targetBalance) {
-        setMnsInputError(insufficientFundsMessage(cost, targetBalance));
+      const targetBalance = resultBalance[0];
+
+      if (cost > targetBalance.balance) {
+        setMnsInputError(insufficientFundsMessage(cost, targetBalance.balance));
         resetCostAndLoading(cost);
         return;
       }

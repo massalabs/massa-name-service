@@ -2,13 +2,14 @@ import { Args, U256 } from '@massalabs/massa-web3';
 import { useMnsStore } from '../store/mnsStore';
 
 export function useMnsList() {
-  const { setList, setListSpinning, mnsContract, listSpinning } = useMnsStore();
+  const { setList, setListSpinning, readOnlyMnsContract, listSpinning } =
+    useMnsStore();
 
   async function getUserDomains(userAddress: string) {
     setListSpinning(true);
 
     try {
-      const resultBalance = await mnsContract.read(
+      const resultBalance = await readOnlyMnsContract.read(
         'balanceOf',
         new Args().addString(userAddress),
       );
@@ -26,8 +27,8 @@ export function useMnsList() {
         return;
       }
 
-      const domains = await mnsContract.getOwnedDomains(userAddress);
-      const targets = await mnsContract.getTargets(domains);
+      const domains = await readOnlyMnsContract.getOwnedDomains(userAddress);
+      const targets = await readOnlyMnsContract.getTargets(domains);
 
       const newList = domains.map((domain, index) => ({
         domain,
