@@ -7,13 +7,12 @@ export function MNSClaim() {
   const {
     mnsInputError,
     allocationCost,
-    isPriceLoading,
+    priceLoading,
     claim,
     onDomainInputChange,
   } = useMnsAllocation();
 
-  const isRegisterDisabled =
-    !!mnsInputError || isPriceLoading || !allocationCost;
+  const isRegisterDisabled = !!mnsInputError || priceLoading || !allocationCost;
 
   return (
     <div>
@@ -29,7 +28,7 @@ export function MNSClaim() {
 
           {mnsInputError ? (
             <p className="mb-4 font-light text-s-error">{mnsInputError}</p>
-          ) : isPriceLoading ? (
+          ) : priceLoading ? (
             <p className="mb-4 font-light text-neutral">Loading price...</p>
           ) : (
             <p className="mb-4 font-light text-neutral">

@@ -14,12 +14,12 @@ export function useMnsAllocation() {
     mnsContract,
     readOnlyMnsContract,
     newDomain,
-    setNewDomain,
     mnsInputError,
-    setMnsInputError,
-    isPriceLoading,
-    setIsPriceLoading,
+    priceLoading,
     allocationCost,
+    setNewDomain,
+    setMnsInputError,
+    setPriceLoading,
     setAllocationCost,
   } = useMnsStore();
 
@@ -29,6 +29,7 @@ export function useMnsAllocation() {
 
   useEffect(() => {
     if (!mnsContract) return;
+    // Update Alloc price or error message when mnsContract changes (if account changes)
     onDomainInputChange(newDomain);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mnsContract]);
@@ -53,7 +54,7 @@ export function useMnsAllocation() {
   async function onDomainInputChange(domain: string) {
     if (!provider) return;
     setMnsInputError(null);
-    setIsPriceLoading(true);
+    setPriceLoading(true);
     setNewDomain(domain);
 
     if (!domain) {
@@ -61,7 +62,6 @@ export function useMnsAllocation() {
       return;
     }
 
-    // TODO: Should we get owner instead of target? or both?
     const target = await readOnlyMnsContract.resolve(domain);
     if (target) {
       setMnsInputError(`Domain already linked to ${target}`);
@@ -87,13 +87,13 @@ export function useMnsAllocation() {
     } catch (err) {
       handleCostError(err);
     } finally {
-      setIsPriceLoading(false);
+      setPriceLoading(false);
     }
   }
 
   function resetCostAndLoading(cost: bigint = 0n) {
     setAllocationCost(cost);
-    setIsPriceLoading(false);
+    setPriceLoading(false);
   }
 
   function handleCostError(error: unknown) {
@@ -112,7 +112,7 @@ export function useMnsAllocation() {
     getUserDomains,
     getAllocationCost,
     allocationCost,
-    isPriceLoading,
+    priceLoading,
     mnsInputError,
     isPending,
     mnsContract,

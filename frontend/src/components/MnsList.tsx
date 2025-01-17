@@ -33,7 +33,7 @@ export function MNSList() {
     <div>
       <Accordion
         customClass="border-none"
-        title={`Owned MNS  (${list.length})`}
+        title={listSpinning ? 'Fetching...' : `Owned MNS  (${list.length})`}
       >
         {listSpinning ? (
           <div className="flex items-center justify-center">

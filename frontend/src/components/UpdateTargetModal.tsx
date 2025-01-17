@@ -19,18 +19,18 @@ export function UpdateTargetModal({
 
   if (!isOpen) return null;
 
+  const onSave = async () => {
+    changeTargetAddressDnsEntry(domain, newTargetAddress);
+    close();
+  };
+
   return (
     <ChangeModal
-      onClose={close}
       title={`Change target address of ${domain}.massa`}
       inputPlaceholder="Enter a new target address"
       setInputValue={setNewTargetAddress}
-      onSave={() => {
-        if (domain) {
-          changeTargetAddressDnsEntry(domain, newTargetAddress);
-          close();
-        }
-      }}
+      onSave={onSave}
+      onClose={close}
     />
   );
 }

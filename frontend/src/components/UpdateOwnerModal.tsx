@@ -20,22 +20,23 @@ export function UpdateOwnerModal({
 
   if (!isOpen) return null;
 
+  const onSave = async () => {
+    changeOwnershipDnsEntry({
+      currentOwner: owner,
+      newOwner: newOwnerAddress,
+      domain: domain,
+    });
+    close();
+  };
+
   return (
     <div>
       <ChangeModal
-        onClose={close}
         title={`Transfer ownership of ${domain}.massa`}
         inputPlaceholder="Enter a new owner address"
         setInputValue={setNewOwnerAddress}
-        onSave={() => {
-          // TODO: await ?
-          changeOwnershipDnsEntry({
-            currentOwner: owner,
-            newOwner: newOwnerAddress,
-            domain: domain,
-          });
-          close();
-        }}
+        onSave={onSave}
+        onClose={close}
       />
     </div>
   );

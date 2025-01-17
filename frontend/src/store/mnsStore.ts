@@ -9,7 +9,6 @@ import {
 } from '@massalabs/massa-web3';
 
 function getMnsContract(provider: Provider, network: Network): MNS {
-  // TODO: Bearby return chianId in number instead of bigint: We should handle this in wallet provider
   switch (BigInt(network.chainId)) {
     case CHAIN_ID.Buildnet:
       return MNS.buildnet(provider);
@@ -21,7 +20,6 @@ function getMnsContract(provider: Provider, network: Network): MNS {
 }
 
 export function getReadOnlyMnsContract(network: Network): MNS {
-  // TODO: Bearby return chianId in number instead of bigint: We should handle this in wallet provider
   switch (BigInt(network.chainId)) {
     case CHAIN_ID.Buildnet:
       return MNS.buildnet(JsonRpcProvider.buildnet());
@@ -40,7 +38,8 @@ interface MnsStoreState {
   newDomain: string;
   allocationCost: bigint;
   mnsInputError: string | null;
-  isPriceLoading: boolean;
+  priceLoading: boolean;
+  disableActions: boolean;
 
   setMnsContract: (provider: Provider, network: Network) => void;
   setList: (list: DnsUserEntryListResult[]) => void;
@@ -48,7 +47,7 @@ interface MnsStoreState {
   setNewDomain: (domain: string) => void;
   setAllocationCost: (allocationCost: bigint) => void;
   setMnsInputError: (error: string | null) => void;
-  setIsPriceLoading: (isPriceLoading: boolean) => void;
+  setPriceLoading: (priceLoading: boolean) => void;
 }
 
 const createMnsStore = () =>
@@ -60,8 +59,9 @@ const createMnsStore = () =>
     listSpinning: false,
     newDomain: '',
     allocationCost: 0n,
-    isPriceLoading: false,
+    priceLoading: false,
     mnsInputError: null,
+    disableActions: false,
 
     setMnsContract: (provider: Provider, network: Network) => {
       const contract = getMnsContract(provider, network);
@@ -90,8 +90,8 @@ const createMnsStore = () =>
       set({ mnsInputError });
     },
 
-    setIsPriceLoading: (isPriceLoading: boolean) => {
-      set({ isPriceLoading });
+    setPriceLoading: (priceLoading: boolean) => {
+      set({ priceLoading });
     },
   }));
 

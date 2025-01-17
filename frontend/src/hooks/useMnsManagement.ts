@@ -18,7 +18,6 @@ export function useMnsManagement() {
   const { handleOperation, isPending } = useHandleOperation();
   const { getUserDomains } = useMnsList();
   const { connectedAccount: provider } = useAccountStore();
-  // TODO: Check if provider is not null
 
   async function deleteDnsEntry(name: string) {
     if (!provider) return;
@@ -38,14 +37,9 @@ export function useMnsManagement() {
     targetAddress: string,
   ) {
     if (!provider) return;
-    // TODO: Check if really the name
     try {
       const operation = await mnsContract.updateTarget(domain, targetAddress);
       await handleOperation(operation, UPDATE_TARGET_OP_MESSAGE);
-
-      // TODO: Domain are not fetched if balance is 0: Caused by the
-      // readSc that fails if Address never made a transaction
-      // Temporary fixed by using another address in the readSc
       await getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
@@ -61,12 +55,12 @@ export function useMnsManagement() {
     if (!provider) return;
     try {
       const operation = await mnsContract.transferFrom(
+        domain,
         currentOwner,
         newOwner,
-        domain,
       );
       await handleOperation(operation, UPDATE_OWNER_OP_MESSAGE);
-      await getUserDomains(provider.address);
+      getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
       toast.error('Failed to transfer ownership');
