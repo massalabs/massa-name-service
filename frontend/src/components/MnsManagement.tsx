@@ -1,5 +1,5 @@
-import { MNSClaim } from './MnsClaim';
-import { MNSList } from './MnsList';
+import { MNSClaim } from './MNSClaim';
+import { MNSList } from './MNSList';
 import { useAccountStore } from '@massalabs/react-ui-kit';
 import { useInit } from '../hooks/useInit';
 

@@ -1,3 +1,4 @@
+import { toast } from '@massalabs/react-ui-kit';
 import { useMnsStore } from '../store/mnsStore';
 
 export function useMnsList() {
@@ -25,7 +26,8 @@ export function useMnsList() {
       }));
       setList(newList);
     } catch (error) {
-      console.error('Failed to fetch user entries', error);
+      console.error('Failed to fetch user domains', error);
+      toast.error('Something went wrong, we could not fetch your domains');
       setList([]);
     } finally {
       setListSpinning(false);

@@ -5,7 +5,6 @@ import {
 } from '@massalabs/react-ui-kit';
 
 import { useMnsStore } from '../store/mnsStore';
-import { Args } from '@massalabs/massa-web3';
 import { DnsTransferParams } from '../utils/interface';
 import { useMnsList } from './useMnsList';
 import {
@@ -50,7 +49,7 @@ export function useMnsManagement() {
       await getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
-      toast.error('Failed to update');
+      toast.error('Failed to update Target Address');
     }
   }
 
@@ -70,7 +69,7 @@ export function useMnsManagement() {
       await getUserDomains(provider.address);
     } catch (error) {
       console.log(error);
-      toast.error('Failed to update Ownership');
+      toast.error('Failed to transfer ownership');
     }
   }
 

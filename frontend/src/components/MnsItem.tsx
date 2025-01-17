@@ -6,19 +6,21 @@ import {
 } from '@heroicons/react/24/outline';
 import { Clipboard, Tooltip } from '@massalabs/react-ui-kit';
 
+type MnsItemProps = {
+  item: { domain: string; targetAddress: string };
+  onUpdateTarget: () => void;
+  onUpdateOwnership: () => void;
+  onDelete: () => void;
+  isPending: boolean;
+};
+
 export function MnsItem({
   item,
   onUpdateTarget,
   onUpdateOwnership,
   onDelete,
   isPending,
-}: {
-  item: { domain: string; targetAddress: string };
-  onUpdateTarget: () => void;
-  onUpdateOwnership: () => void;
-  onDelete: () => void;
-  isPending: boolean;
-}) {
+}: MnsItemProps) {
   const formatTextWithTooltip = (
     text: string,
     maxLength: number,
@@ -76,17 +78,19 @@ export function MnsItem({
   );
 }
 
+type ActionButtonProps = {
+  onClick: () => void;
+  isPending: boolean;
+  tooltip: string;
+  Icon: React.ElementType;
+};
+
 function ActionButton({
   onClick,
   isPending,
   tooltip,
   Icon,
-}: {
-  onClick: () => void;
-  isPending: boolean;
-  tooltip: string;
-  Icon: React.ElementType;
-}) {
+}: ActionButtonProps) {
   return (
     <button
       className="flex-col justify-center align-middle"

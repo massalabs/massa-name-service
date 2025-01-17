@@ -8,14 +8,3 @@ export function insufficientFundsMessage(cost: bigint, balance: bigint) {
     formatAmount(balance, Mas.NB_DECIMALS).preview
   } MAS. Please top up your account.`;
 }
-
-export function handleError(
-  err: unknown,
-  setError: (error: string | null) => void,
-) {
-  if (err instanceof Error) {
-    setError(err.message);
-  } else {
-    setError('An unexpected error occurred');
-  }
-}

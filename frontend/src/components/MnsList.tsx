@@ -25,6 +25,10 @@ export function MNSList() {
     setOwnershipModalOpen(true);
   };
 
+  if (!connectedAccount) {
+    return null;
+  }
+
   return (
     <div>
       <Accordion
@@ -46,7 +50,7 @@ export function MNSList() {
               isOpen={ownershipModalOpen}
               close={() => setOwnershipModalOpen(false)}
               domain={domainToUpdate}
-              owner={connectedAccount!.address}
+              owner={connectedAccount.address}
             />
 
             {list.length === 0 ? (
