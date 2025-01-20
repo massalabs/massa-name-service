@@ -69,7 +69,6 @@ export function useMnsManagement() {
 
   return {
     isPending,
-    getUserDomains,
     changeOwnershipDnsEntry,
     deleteDnsEntry,
     changeTargetAddressDnsEntry,

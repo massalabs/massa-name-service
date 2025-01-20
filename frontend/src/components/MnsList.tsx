@@ -1,10 +1,11 @@
 import { Accordion, Spinner, useAccountStore } from '@massalabs/react-ui-kit';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMnsStore } from '../store/mnsStore';
 import { useMnsManagement } from '../hooks/useMnsManagement';
 import { MnsItem } from './MnsItem';
 import { UpdateTargetModal } from './UpdateTargetModal';
 import { UpdateOwnerModal } from './UpdateOwnerModal';
+import { useMnsList } from '../hooks/useMnsList';
 
 export function MNSList() {
   const { connectedAccount } = useAccountStore();
@@ -13,7 +14,9 @@ export function MNSList() {
   const [updateTargetModalOpen, setTargetModalOpen] = useState<boolean>(false);
 
   const { deleteDnsEntry, isPending } = useMnsManagement();
-  const { listSpinning, list } = useMnsStore();
+  const { getUserDomains } = useMnsList();
+
+  const { listSpinning, list, mnsContract } = useMnsStore();
 
   const onUpdateTarget = (domain: string) => {
     setDomainToUpdate(domain);
@@ -24,6 +27,11 @@ export function MNSList() {
     setDomainToUpdate(domain);
     setOwnershipModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!mnsContract || !connectedAccount) return;
+    getUserDomains(connectedAccount.address);
+  }, [mnsContract, connectedAccount, getUserDomains]);
 
   if (!connectedAccount) {
     return null;

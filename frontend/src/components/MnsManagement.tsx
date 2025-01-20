@@ -1,11 +1,19 @@
 import { MNSClaim } from './MnsClaim';
 import { MNSList } from './MnsList';
 import { useAccountStore } from '@massalabs/react-ui-kit';
-import { useInit } from '../hooks/useInit';
+
+import { useEffect } from 'react';
+import { useMnsStore } from '../store/mnsStore';
 
 export function MNSManagement() {
   const { connectedAccount } = useAccountStore();
-  useInit();
+  const { setMnsContract } = useMnsStore();
+  const { connectedAccount: provider, network } = useAccountStore();
+
+  useEffect(() => {
+    if (!provider || !network) return;
+    setMnsContract(provider, network);
+  }, [network, provider, setMnsContract]);
 
   const connected = !!connectedAccount;
 
