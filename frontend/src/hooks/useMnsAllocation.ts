@@ -25,7 +25,7 @@ export function useMnsAllocation() {
 
   const { handleOperation, isPending } = useHandleOperation();
   const { getUserDomains } = useMnsList();
-  const { connectedAccount: provider } = useAccountStore();
+  const { connectedAccount: provider, refreshBalance } = useAccountStore();
 
   useEffect(() => {
     if (!mnsContract) return;
@@ -49,6 +49,7 @@ export function useMnsAllocation() {
 
     getUserDomains(provider.address);
     setNewDomain('');
+    refreshBalance(false);
   }
 
   async function onDomainInputChange(domain: string) {

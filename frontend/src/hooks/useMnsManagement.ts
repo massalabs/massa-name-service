@@ -17,7 +17,7 @@ export function useMnsManagement() {
   const { setMnsContract, mnsContract } = useMnsStore();
   const { handleOperation, isPending } = useHandleOperation();
   const { getUserDomains } = useMnsList();
-  const { connectedAccount: provider } = useAccountStore();
+  const { connectedAccount: provider, refreshBalance } = useAccountStore();
 
   async function deleteDnsEntry(name: string) {
     if (!provider) return;
@@ -26,6 +26,7 @@ export function useMnsManagement() {
       const operation = await mnsContract.free(name);
       await handleOperation(operation, DELETE_OP_MESSAGE);
       await getUserDomains(provider.address);
+      refreshBalance(false);
     } catch (error) {
       console.log(error);
       toast.error('Failed to delete Dns Entry');
@@ -41,6 +42,7 @@ export function useMnsManagement() {
       const operation = await mnsContract.updateTarget(domain, targetAddress);
       await handleOperation(operation, UPDATE_TARGET_OP_MESSAGE);
       await getUserDomains(provider.address);
+      refreshBalance(false);
     } catch (error) {
       console.log(error);
       toast.error('Failed to update Target Address');
@@ -61,6 +63,7 @@ export function useMnsManagement() {
       );
       await handleOperation(operation, UPDATE_OWNER_OP_MESSAGE);
       getUserDomains(provider.address);
+      refreshBalance(false);
     } catch (error) {
       console.log(error);
       toast.error('Failed to transfer ownership');
