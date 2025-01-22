@@ -5,9 +5,9 @@ interface CardProps {
 }
 
 export function Card({
-  children,
   bgColor = 'bg-primary',
   customClass = '',
+  children,
 }: CardProps) {
   return (
     <div className={`${bgColor} ${customClass} border-none rounded-xl p-5`}>
