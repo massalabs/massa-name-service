@@ -33,11 +33,14 @@ export function MnsItem({
       <>
         {text.length > maxLength ? (
           <Tooltip body={text}>
-            <Clipboard rawContent={`${displayText}...`} />
+            <Clipboard
+              rawContent={text}
+              displayedContent={`${displayText}...`}
+            />
           </Tooltip>
         ) : (
           <div className="w-fit">
-            <Clipboard rawContent={displayText} />
+            <Clipboard rawContent={text} displayedContent={displayText} />
           </div>
         )}
       </>
