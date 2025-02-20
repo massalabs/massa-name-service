@@ -590,7 +590,7 @@ describe('Test NFT name', () => {
     switchUser(owner);
   });
   test('Test NFT name', () => {
-    expect(name()).toStrictEqual(stringToBytes('MassaNameService'));
+    expect(name()).toStrictEqual(stringToBytes('MassaNameSystem'));
   });
 });
 

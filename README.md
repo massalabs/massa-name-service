@@ -1,2 +1,2 @@
-# MassaNameService
-Massa naming service
+# Massa Name System
+Massa name system

@@ -31,7 +31,7 @@ import {
 import { u256 } from 'as-bignum/assembly';
 
 export function constructor(_: StaticArray<u8>): void {
-  mrc721Constructor('MassaNameService', 'MNS');
+  mrc721Constructor('MassaNameSystem', 'MNS');
   Storage.set(COUNTER_KEY, u256ToBytes(u256.Zero));
   Storage.set(lockedKey(), u256ToBytes(u256.Zero));
   Storage.set(TOTAL_SUPPLY_KEY, u256ToBytes(u256.Zero));
