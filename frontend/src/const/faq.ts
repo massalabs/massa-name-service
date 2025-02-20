@@ -2,9 +2,9 @@ import { FAQData } from '../components/FAQ';
 
 export const faqData: FAQData[] = [
   {
-    question: 'What is Massa Name Service ?',
+    question: 'What is Massa Name System ?',
     answer:
-      'Massa Name Service is a decentralized naming service which allows users and smart contracts to be recognized on the Massa blockchain.',
+      'Massa Name System is a decentralized naming service which allows users and smart contracts to be recognized on the Massa blockchain.',
   },
   {
     question: 'How do I register a name ?',

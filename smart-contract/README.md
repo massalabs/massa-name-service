@@ -1,4 +1,4 @@
-# Massa Name service
+# Massa Name System
 
 ## Build
 
